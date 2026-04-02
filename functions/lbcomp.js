@@ -71,7 +71,8 @@ async function handleLbCompRequest(interaction, botToAuthorMap, pruneMap) {
         console.error("Error in handleLbCompRequest:", err);
         const errorMsg = { content: "An error occurred while fetching the leaderboard.", ephemeral: true };
         if (interaction.deferred || interaction.replied) {
-            await interaction.editReply(errorMsg).catch(() => {});
+            await interaction.deleteReply().catch(() => {});
+            await interaction.followUp(errorMsg).catch(() => {});
         } else {
             await interaction.reply(errorMsg).catch(() => {});
         }
