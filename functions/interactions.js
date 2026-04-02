@@ -5,7 +5,6 @@ const {
 } = require("./parse_page.js");
 const { handleFileRequest } = require("./parse_file.js");
 const { handleContribScoresRequest } = require("./contribscores.js");
-const { handleLbCompRequest } = require("./lbcomp.js");
 const {
     handleSpeedrunRequest
 } = require("./speedrun.js");
@@ -378,18 +377,6 @@ async function handleInteraction(interaction) {
             }
         } catch (err) {
             return sendInteractionError(interaction, err, 'lbwiki');
-        }
-    } else if (interaction.commandName === 'lbcomp') {
-        try {
-            const subCommand = interaction.options.getSubcommand();
-            if (subCommand === 'classic') {
-                await handleLbCompRequest(interaction, botToAuthorMap, pruneMap);
-                return;
-            } else {
-                return interaction.reply({ content: 'Unknown subcommand.', ephemeral: true }).catch(() => {});
-            }
-        } catch (err) {
-            return sendInteractionError(interaction, err, 'lbcomp');
         }
     } else if (interaction.commandName === 'lbspeedrun') {
         try {

@@ -47,19 +47,6 @@ const commands = [
         ]
     },
     {
-        name: 'lbcomp',
-        description: 'View competitive leaderboards',
-        integrationTypes: [0, 1],
-        contexts: [0, 1, 2],
-        options: [
-            {
-                name: 'classic',
-                description: 'View the classic competitive leaderboard',
-                type: 1 // SUB_COMMAND
-            }
-        ]
-    },
-    {
         name: 'lbwiki',
         description: 'View wiki leaderboards',
         integrationTypes: [0, 1],
