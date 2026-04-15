@@ -12,6 +12,12 @@ const UTG_CATEGORIES = [
     { name: 'Nothing Left Behind Part 1', value: UTG_CATEGORY_IDS.NOTHING_LEFT_BEHIND_PT1 }
 ];
 
+const UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES = [
+    { name: 'Runthrough', value: 'q75wzdp1' },
+    { name: 'Intended Route', value: 'qked60dq' },
+    { name: 'No Limits', value: '1gn7od6l' }
+];
+
 const UFG_CATEGORY_IDS = {
     BEAT_UNTITLED_FARMING: '5dw3wr52',
     ANY_PERCENT: 'wk6qlzo2'
@@ -177,5 +183,6 @@ async function handleSpeedrunRequest(interaction, gameKey, categoryId, levelId =
 module.exports = {
     handleSpeedrunRequest,
     UTG_CATEGORIES,
+    UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES,
     UFG_CATEGORIES
 };
