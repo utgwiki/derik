@@ -1,6 +1,7 @@
 const { WIKIS } = require("../config.js");
 const {
     UTG_CATEGORIES,
+    UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES,
     UFG_CATEGORIES
 } = require("./speedrun.js");
 
@@ -27,6 +28,13 @@ const commands = [
                         type: 3, // STRING
                         required: true,
                         choices: UTG_CATEGORIES
+                    },
+                    {
+                        name: 'subcategory',
+                        description: 'The subcategory to view (if applicable)',
+                        type: 3, // STRING
+                        required: false,
+                        choices: UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES
                     }
                 ]
             },
