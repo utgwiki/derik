@@ -385,7 +385,7 @@ async function handleInteraction(interaction) {
             if (subCommand === 'utg') {
                 const categoryId = interaction.options.getString('category');
                 const subcategoryId = interaction.options.getString('subcategory');
-                const variables = subcategoryId ? { 'ql6mr2j8': subcategoryId } : {};
+                const variables = (subcategoryId && categoryId === 'w2077y8k') ? { 'ql6mr2j8': subcategoryId } : {};
                 response = await handleSpeedrunRequest(interaction, 'utg', categoryId, null, variables);
             } else if (subCommand === 'ufg') {
                 const categoryId = interaction.options.getString('category');
