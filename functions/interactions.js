@@ -378,7 +378,7 @@ async function handleInteraction(interaction) {
         } catch (err) {
             return sendInteractionError(interaction, err, 'lbwiki');
         }
-    } else if (interaction.commandName === 'lbspeedrun') {
+    } else if (interaction.commandName === 'speedrun') {
         try {
             const subCommand = interaction.options.getSubcommand();
             let response;
@@ -399,7 +399,7 @@ async function handleInteraction(interaction) {
                 pruneMap(botToAuthorMap);
             }
         } catch (err) {
-            return sendInteractionError(interaction, err, 'lbspeedrun');
+            return sendInteractionError(interaction, err, 'speedrun');
         }
     } else if (interaction.commandName === 'wiki') {
         const wikiKey = interaction.options.getString('wiki');
