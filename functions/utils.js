@@ -21,4 +21,42 @@ const fetch = async (...args) => {
     return fetchInstance(urlOrRequest, newOptions);
 };
 
-module.exports = { fetch };
+/**
+ * Truncates a markdown string to a certain number of paragraphs.
+ * Paragraphs are assumed to be separated by double newlines (\n\n).
+ * @param {string} text - The markdown text to truncate.
+ * @param {number} maxParagraphs - Maximum number of paragraphs to keep.
+ * @returns {string} - The truncated text.
+ */
+function truncateToParagraphs(text, maxParagraphs = 2) {
+    if (!text) return "";
+    const paragraphs = text.split(/\n\n+/).filter(p => p.trim().length > 0);
+
+    let result;
+    if (paragraphs.length <= maxParagraphs) {
+        result = text;
+    } else {
+        result = paragraphs.slice(0, maxParagraphs).join('\n\n') + ' ...';
+    }
+
+    // Ensure the result doesn't exceed Discord's 2000 character limit
+    if (result.length > 2000) {
+        // Try to truncate at paragraph boundaries
+        let truncated = "";
+        for (const para of paragraphs) {
+            const testResult = truncated ? truncated + '\n\n' + para : para;
+            if (testResult.length + 4 > 2000) break; // +4 for ' ...'
+            truncated = testResult;
+        }
+        result = truncated + ' ...';
+
+        // If still too long, hard truncate
+        if (result.length > 2000) {
+            result = result.substring(0, 1997) + '...';
+        }
+    }
+
+    return result;
+}
+
+module.exports = { fetch, truncateToParagraphs };
