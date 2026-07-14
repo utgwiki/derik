@@ -4,9 +4,9 @@ const BOT_NAME = "Derik";
 const WIKIS = {
     "untitled-tag-game": {
         name: "untitled tag game",
-        baseUrl: "https://tagging.wiki",
-        apiEndpoint: "https://tagging.wiki/w/api.php",
-        articlePath: "https://tagging.wiki/",
+        baseUrl: "https://farm.miraheze.org",
+        apiEndpoint: "https://farm.miraheze.org/w/api.php",
+        articlePath: "https://farm.miraheze.org/",
         prefix: "utg",
         emoji: "1488793151027155017"
     },
@@ -33,7 +33,7 @@ const STATUS_OPTIONS = [
     { type: 4, text: "now supporting 2 wikis!" },
     { type: 4, text: "use [[utg:Page]] for untitled tag game embedding" },
     { type: 4, text: "use [[ufg:Page]] for untitled farming game embedding" },
-    { type: 4, text: "tagging.wiki" },
+    { type: 4, text: "farm.miraheze.org" },
     { type: 4, text: "farm.miraheze.org" },
     { type: 0, text: "untitled tag game" },
     { type: 0, text: "untitled farming game" },
