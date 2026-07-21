@@ -4,9 +4,9 @@ const BOT_NAME = "Derik";
 const WIKIS = {
     "untitled-tag-game": {
         name: "untitled tag game",
-        baseUrl: "https://farm.miraheze.org",
-        apiEndpoint: "https://farm.miraheze.org/w/api.php",
-        articlePath: "https://farm.miraheze.org/",
+        baseUrl: "https://utg.miraheze.org",
+        apiEndpoint: "https://utg.miraheze.org/w/api.php",
+        articlePath: "https://utg.miraheze.org/",
         prefix: "utg",
         emoji: "1488793151027155017"
     },
