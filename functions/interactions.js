@@ -4,16 +4,18 @@ const {
     getSectionContent,
     getRandomPage,
     getUserProfile,
+    getSectionChoices,
     linkIntroductionPageName,
 } = require("./parse_page.js");
 const { handleFileRequest } = require("./parse_file.js");
 const { handleContribScoresRequest } = require("./contribscores.js");
 const {
-    handleSpeedrunRequest
+    handleSpeedrunRequest,
 } = require("./speedrun.js");
 const {
     WIKIS,
-    toggleContribScore
+    toggleContribScore,
+    BOT_NAME
 } = require("../config.js");
 const { fetch, truncateToParagraphs: truncateContentToParagraphs } = require("./utils.js");
 
@@ -32,6 +34,11 @@ const {
 
 const responseMap = new Map();
 const botToAuthorMap = new Map();
+
+function nextRandomWikiKey() {
+    const keys = Object.keys(WIKIS);
+    return keys[Math.floor(Math.random() * keys.length)];
+}
 
 function pruneMap(map, maxSize = 1000) {
     while (map.size > maxSize) {
@@ -53,7 +60,7 @@ function sendInteractionError(interaction, error, tag) {
 async function fetchWikiChoices(wikiConfig, params, listKey, isFileSearch) {
     try {
         const res = await fetch(`${wikiConfig.apiEndpoint}?${params.toString()}`, {
-            headers: { "User-Agent": "DiscordBot/Derik" },
+            headers: { "User-Agent": `${BOT_NAME} Discord bot` },
             signal: AbortSignal.timeout(3000)
         });
         if (!res.ok) {
@@ -66,7 +73,7 @@ async function fetchWikiChoices(wikiConfig, params, listKey, isFileSearch) {
         const results = [];
 
         for (const item of items) {
-            let title = item.title ?? item.name;
+            let title = item.title ?? item.name ?? item.userid;
             let value = title;
 
             if (isFileSearch && title.toLowerCase().startsWith('file:')) {
@@ -85,6 +92,10 @@ async function fetchWikiChoices(wikiConfig, params, listKey, isFileSearch) {
 }
 
 async function getAutocompleteChoices(wikiConfig, listType, prefix) {
+    if (listType === 'allusers') {
+        const params = new URLSearchParams({ action: 'query', format: 'json', list: 'allusers', auprefix: prefix.trim(), aulimit: '25' });
+        return await fetchWikiChoices(wikiConfig, params, 'allusers', false);
+    }
     const isFileSearch = listType === 'allimages';
     const namespace = isFileSearch ? '6' : '0';
     let searchPrefix = prefix.trim();
@@ -142,7 +153,7 @@ async function getAutocompleteChoices(wikiConfig, listType, prefix) {
     return finalChoices;
 }
 
-function buildPageEmbed(title, content, imageUrl, wikiConfig, gallery = null) {
+function buildPageEmbed(title, content, imageUrl, wikiConfig, gallery = null, buttonEmoji = null) {
     const container = new ContainerBuilder();
 
     const hasContent = content && content !== "No content available.";
@@ -169,7 +180,8 @@ function buildPageEmbed(title, content, imageUrl, wikiConfig, gallery = null) {
 
         if (hasGallery) {
             const mediaGallery = new MediaGalleryBuilder();
-            gallery.slice(0, 10).forEach(item => {
+            const galleryLimit = gallery.length >= 9 ? 9 : gallery.length >= 6 ? 6 : gallery.length >= 4 ? 4 : 1;
+            gallery.slice(0, galleryLimit).forEach(item => {
                 const galleryItem = new MediaGalleryItemBuilder().setURL(item.url);
                 if (item.caption) {
                     galleryItem.setDescription(item.caption.slice(0, 1000));
@@ -184,7 +196,7 @@ function buildPageEmbed(title, content, imageUrl, wikiConfig, gallery = null) {
         try {
             let pageUrl;
             if (title === "Special:ContributionScores") {
-                pageUrl = `${wikiConfig.articlePath}Special:ContributionScores?utm_source=derik`;
+                pageUrl = `${wikiConfig.articlePath}Special:ContributionScores?utm_source=${encodeURIComponent(BOT_NAME)}`;
             } else {
                 const isSectionLink = String(title).includes(" § ");
                 const titleStr = String(title);
@@ -200,7 +212,7 @@ function buildPageEmbed(title, content, imageUrl, wikiConfig, gallery = null) {
                 }
                 const parts = pageOnly.split(':').map(s => encodeURIComponent(s.replace(/ /g, "_")));
                 const anchor = frag ? '#' + encodeURIComponent(frag.replace(/ /g, '_')) : '';
-                pageUrl = `${wikiConfig.articlePath}${parts.join(':')}?utm_source=derik${anchor}`;
+                pageUrl = `${wikiConfig.articlePath}${parts.join(':')}?utm_source=${encodeURIComponent(BOT_NAME)}${anchor}`;
             }
 
             const row = new ActionRowBuilder();
@@ -209,11 +221,17 @@ function buildPageEmbed(title, content, imageUrl, wikiConfig, gallery = null) {
                 .setStyle(ButtonStyle.Link)
                 .setURL(pageUrl);
 
-            if (wikiConfig.emoji) {
-                btn.setEmoji(wikiConfig.emoji);
+            if (buttonEmoji || wikiConfig.emoji) {
+                btn.setEmoji(buttonEmoji || wikiConfig.emoji);
             }
 
             if (btn) row.addComponents(btn);
+            if (hasGallery && gallery.length > galleryLimit) {
+                row.addComponents(new ButtonBuilder()
+                    .setLabel(`View ${gallery.length - galleryLimit} more`.slice(0, 80))
+                    .setStyle(ButtonStyle.Link)
+                    .setURL(pageUrl));
+            }
             if (row.components.length > 0) container.addActionRowComponents(row);
         } catch (err) {
             console.warn("Failed to build link button:", err.message);
@@ -225,13 +243,14 @@ function buildPageEmbed(title, content, imageUrl, wikiConfig, gallery = null) {
 
 function buildUserEmbed(profile, wikiConfig) {
     const container = new ContainerBuilder();
-    const groupLine = profile.groups.length ? `-# ${profile.groups.join(", ")}` : "";
-    const editLine = Number.isFinite(profile.editCount) ? `-# ${profile.editCount} edits` : "";
+    const groupText = profile.groups.length > 1
+        ? `${profile.groups.slice(0, -1).join(", ")} & ${profile.groups.at(-1)}`
+        : profile.groups[0] || "";
+    const groupLine = groupText ? `-# ${groupText}` : "";
     const content = [
         `## [@${profile.username}](${profile.profileUrl})`,
         groupLine,
-        editLine,
-        profile.content || ""
+        profile.content ? truncateContentToParagraphs(profile.content, 2, 500) : ""
     ].filter(Boolean).join("\n");
 
     const section = new SectionBuilder();
@@ -249,14 +268,20 @@ function buildUserEmbed(profile, wikiConfig) {
     const button = new ButtonBuilder()
         .setLabel(`User:${profile.username}`.slice(0, 80))
         .setStyle(ButtonStyle.Link)
-        .setURL(profile.profileUrl);
+        .setURL(`${profile.profileUrl}?utm_source=${encodeURIComponent(BOT_NAME)}`);
     if (wikiConfig.emoji) button.setEmoji(wikiConfig.emoji);
     row.addComponents(button);
+    if (Number.isFinite(profile.editCount)) {
+        row.addComponents(new ButtonBuilder()
+            .setLabel(`${profile.editCount.toLocaleString('en-US')} edits`.slice(0, 80))
+            .setStyle(ButtonStyle.Link)
+            .setURL(`${profile.contribsUrl}?utm_source=${encodeURIComponent(BOT_NAME)}`));
+    }
     container.addActionRowComponents(row);
     return container;
 }
 
-async function handleUserRequest(wikiConfig, rawPageName, messageOrInteraction, botMessageToEdit = null) {
+async function handleUserRequest(wikiConfig, rawPageName, messageOrInteraction, botMessageToEdit = null, buttonEmoji = null) {
     if (rawPageName.toLowerCase().startsWith("file:")) {
         return await handleFileRequest(wikiConfig, rawPageName.slice(5).trim(), messageOrInteraction);
     }
@@ -368,7 +393,7 @@ async function handleUserRequest(wikiConfig, rawPageName, messageOrInteraction, 
                 content = "No content available.";
             }
 
-            const container = buildPageEmbed(displayTitle, truncateContentToParagraphs(content), imageUrl, wikiConfig, gallery);
+            const container = buildPageEmbed(displayTitle, truncateContentToParagraphs(content), imageUrl, wikiConfig, gallery, buttonEmoji);
 
             return await smartReply({
                 content: "",
@@ -402,7 +427,7 @@ async function handleUserRequest(wikiConfig, rawPageName, messageOrInteraction, 
 
 async function handleInteraction(interaction) {
     if (interaction.isAutocomplete()) {
-        if (interaction.commandName === 'parse' || interaction.commandName === 'wiki') {
+        if (interaction.commandName === 'parse' || interaction.commandName === 'wiki' || interaction.commandName === 'user') {
             const focusedOption = interaction.options.getFocused(true);
             const wikiKey = interaction.options.getString('wiki');
             const wikiConfig = WIKIS[wikiKey];
@@ -411,7 +436,13 @@ async function handleInteraction(interaction) {
                 return interaction.respond([]).catch(() => {});
             }
 
-            const listType = (focusedOption.name === 'page') ? 'allpages' : (focusedOption.name === 'file' ? 'allimages' : null);
+            if (focusedOption.name === 'section') {
+                const pageName = interaction.options.getString('page');
+                return interaction.respond(await getSectionChoices(pageName, focusedOption.value, wikiConfig)).catch(() => {});
+            }
+            const listType = (focusedOption.name === 'page') ? 'allpages'
+                : (focusedOption.name === 'file' ? 'allimages'
+                : (focusedOption.name === 'username' ? 'allusers' : null));
             if (!listType) return interaction.respond([]).catch(() => {});
 
             const choices = await getAutocompleteChoices(wikiConfig, listType, focusedOption.value);
@@ -485,7 +516,7 @@ async function handleInteraction(interaction) {
             }
         }
     } else if (interaction.commandName === 'user' || interaction.commandName === 'random') {
-        const wikiKey = interaction.options.getString('wiki') || 'superstar-racers';
+        const wikiKey = interaction.options.getString('wiki') || nextRandomWikiKey();
         const wikiConfig = WIKIS[wikiKey];
         if (!wikiConfig) {
             await interaction.reply({ content: 'Unknown wiki selection.', ephemeral: true }).catch(() => {});
@@ -496,7 +527,7 @@ async function handleInteraction(interaction) {
             const pageName = interaction.commandName === 'user'
                 ? `User:${interaction.options.getString('username')}`
                 : 'Special:Random';
-            const response = await handleUserRequest(wikiConfig, pageName, interaction);
+            const response = await handleUserRequest(wikiConfig, pageName, interaction, null, interaction.commandName === 'random' ? '🎲' : null);
             if (response && response.id) {
                 botToAuthorMap.set(response.id, interaction.user.id);
                 pruneMap(botToAuthorMap);
@@ -520,7 +551,8 @@ async function handleInteraction(interaction) {
             let response;
             if (subCommand === 'page') {
                 const pageName = interaction.options.getString('page');
-                response = await handleUserRequest(wikiConfig, pageName, interaction);
+                const section = interaction.options.getString('section');
+                response = await handleUserRequest(wikiConfig, section ? `${pageName}#${section}` : pageName, interaction);
             } else if (subCommand === 'file') {
                 const fileName = interaction.options.getString('file');
                 response = await handleFileRequest(wikiConfig, fileName, interaction);
@@ -552,3 +584,4 @@ module.exports = {
     botToAuthorMap,
     pruneMap
 };
+

@@ -1,4 +1,5 @@
 const { fetch } = require("./utils.js");
+const { BOT_NAME } = require("../config.js");
 
 async function getContributionScores(wikiConfig) {
     try {
@@ -11,7 +12,7 @@ async function getContributionScores(wikiConfig) {
         });
 
         const url = `${wikiConfig.apiEndpoint}?${params.toString()}`;
-        const res = await fetch(url, { headers: { "User-Agent": "DiscordBot/Derik" } });
+        const res = await fetch(url, { headers: { "User-Agent": `${BOT_NAME} Discord bot` } });
         const json = await res.json();
         const html = json.parse?.text?.["*"];
 
@@ -24,7 +25,7 @@ async function getContributionScores(wikiConfig) {
         const rows = html.split('<tr class="">');
         rows.shift(); // Remove header
 
-        let dataSummary = `## Edit leaderboard for [${wikiConfig.name} wiki](${wikiConfig.articlePath}Special:ContributionScores) <:emoji:${wikiConfig.emoji}>\n`;
+        let dataSummary = `## Edit leaderboard for [${wikiConfig.name} Wiki](${wikiConfig.articlePath}Special:ContributionScores) <:emoji:${wikiConfig.emoji}>\n`;
         dataSummary += `-# Top 10 users over the past 7 days\n\n`;
         
         // Extract raw data into an array
@@ -48,7 +49,7 @@ async function getContributionScores(wikiConfig) {
             const paddedScore = data.score.padStart(maxScoreLength, ' ');
             const paddedEdits = data.edits.padStart(maxEditLength, ' ');
         
-            dataSummary += `${i + 1}. <:cash:1488794096548974592> \`${paddedScore}\`    ✏️ \`${paddedEdits}\`    **[@${data.user}](${wikiConfig.articlePath}User:${data.user})**\n`;
+            dataSummary += `${i + 1}. <:playerpoint:1472433775593000961> \`${paddedScore}\`    ✏️ \`${paddedEdits}\`    **[@${data.user}](${wikiConfig.articlePath}User:${data.user})**\n`;
         });
 
         if (!dataSummary) return {
@@ -111,3 +112,4 @@ async function handleContribScoresRequest(interaction, { toggleContribScore, WIK
 }
 
 module.exports = { getContributionScores, handleContribScoresRequest };
+

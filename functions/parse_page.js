@@ -1,5 +1,8 @@
 const { fetch, truncateToParagraphs: truncateContentToParagraphs } = require("./utils.js");  
+const { BOT_NAME } = require("../config.js");
 const cheerio = require('cheerio');
+
+const BOT_USER_AGENT = `${BOT_NAME} Discord bot`;
 
 // --- CACHING ---
 const CANONICAL_CACHE = new Map();
@@ -165,7 +168,7 @@ async function findCanonicalTitle(input, wikiConfig) {
         });
 
         const res = await fetch(`${wikiConfig.apiEndpoint}?${directParams.toString()}`, { 
-            headers: { "User-Agent": "DiscordBot/Derik" } 
+            headers: { "User-Agent": BOT_USER_AGENT } 
         });
         const json = await res.json();
         const pageId = json.query?.pageids?.[0];
@@ -189,7 +192,7 @@ async function findCanonicalTitle(input, wikiConfig) {
         });
 
         const searchRes = await fetch(`${wikiConfig.apiEndpoint}?${searchParams.toString()}`, {
-            headers: { "User-Agent": "DiscordBot/Derik" }
+            headers: { "User-Agent": BOT_USER_AGENT }
         });
         const searchJson = await searchRes.json();
         const topResult = searchJson.query?.search?.[0];
@@ -237,7 +240,7 @@ async function getPageData(input, wikiConfig) {
         });
 
         const res = await fetch(`${wikiConfig.apiEndpoint}?${params.toString()}`, {
-            headers: { "User-Agent": "DiscordBot/Derik" }
+            headers: { "User-Agent": BOT_USER_AGENT }
         });
         const json = await res.json();
 
@@ -284,7 +287,7 @@ async function getRandomPage(wikiConfig) {
         rnlimit: "1"
     });
     try {
-        const res = await fetch(`${wikiConfig.apiEndpoint}?${params.toString()}`, { headers: { "User-Agent": "DiscordBot/Orbital" } });
+        const res = await fetch(`${wikiConfig.apiEndpoint}?${params.toString()}`, { headers: { "User-Agent": BOT_USER_AGENT } });
         if (!res.ok) return null;
         const json = await res.json();
         return json.query?.random?.[0]?.title || null;
@@ -320,36 +323,102 @@ async function getUserProfile(username, wikiConfig) {
     });
 
     try {
-        const userRes = await fetch(`${wikiConfig.apiEndpoint}?${userParams.toString()}`, { headers: { "User-Agent": "DiscordBot/Orbital" } });
+        const userRes = await fetch(`${wikiConfig.apiEndpoint}?${userParams.toString()}`, { headers: { "User-Agent": BOT_USER_AGENT } });
         if (!userRes.ok) return null;
         const userJson = await userRes.json();
         const user = userJson.query?.users?.[0];
         if (!user || user.invalid !== undefined || user.userid === 0) return null;
 
-        let profileJson = null;
-        const profileParams = new URLSearchParams({ action: "setuserprofilev2", format: "json", user: normalized, username: normalized });
+        let avatarUrl = null;
         try {
-            const profileRes = await fetch(`${wikiConfig.apiEndpoint}?${profileParams.toString()}`, { headers: { "User-Agent": "DiscordBot/Orbital" } });
-            if (profileRes.ok) profileJson = await profileRes.json();
-        } catch (_) { /* Profile data is optional; the MediaWiki user record is authoritative. */ }
-
-        let avatarUrl = firstValue(profileJson, ["avatarUrl", "avatar_url", "avatar", "image"]);
-        if (avatarUrl && avatarUrl.startsWith("/")) {
-            avatarUrl = new URL(avatarUrl, wikiConfig.baseUrl).href;
+            const profilePageUrl = `${wikiConfig.articlePath}User:${encodeURIComponent(normalized.replace(/ /g, "_"))}`;
+            const profilePageRes = await fetch(profilePageUrl, { headers: { "User-Agent": BOT_USER_AGENT } });
+            if (profilePageRes.ok) {
+                const $profile = cheerio.load(await profilePageRes.text());
+                avatarUrl = $profile("img.profile-avatar-image").first().attr("src") || null;
+                if (avatarUrl?.startsWith("//")) avatarUrl = `https:${avatarUrl}`;
+                else if (avatarUrl?.startsWith("/")) avatarUrl = new URL(avatarUrl, wikiConfig.baseUrl).href;
+            }
+        } catch (err) {
+            console.warn("Failed to fetch profile avatar:", err.message);
         }
         const page = await getPageData(`User:${normalized}`, wikiConfig);
         const profileUrl = `${wikiConfig.articlePath}User:${normalized.replace(/ /g, "_")}`;
+        const fallbackGroupLabels = {
+            bureaucrat: "Bureaucrat",
+            "interface-admin": "Interface administrator",
+            sysop: "Administrator",
+            autoconfirmed: "Autoconfirmed",
+            confirmed: "Confirmed",
+            bot: "Bot"
+        };
+        const visibleGroups = (Array.isArray(user.groups) ? user.groups : [])
+            .filter(group => !["*", "user"].includes(group));
+        const messageNames = visibleGroups.map(group => `group-${group}-member`).join("|");
+        let wikiGroupLabels = {};
+        if (messageNames) {
+            try {
+                const labelParams = new URLSearchParams({
+                    action: "query",
+                    format: "json",
+                    meta: "allmessages",
+                    ammessages: messageNames,
+                    amlang: "content"
+                });
+                const labelRes = await fetch(`${wikiConfig.apiEndpoint}?${labelParams.toString()}`, { headers: { "User-Agent": BOT_USER_AGENT } });
+                const messages = (await labelRes.json()).query?.allmessages || [];
+                wikiGroupLabels = Object.fromEntries(messages
+                    .filter(message => message['*'] && !message['*'].includes("⧼"))
+                    .map(message => [message.name, message['*']]));
+            } catch (err) {
+                console.warn("Failed to fetch on-wiki group labels:", err.message);
+            }
+        }
+        const cleanGroupLabel = label => String(label)
+            .replace(/\{\{\s*GENDER\s*:\s*[^|}]+\|([^{}]*)\}\}/gi, "$1")
+            .replace(/\{\{[^{}]*\}\}/g, "")
+            .trim()
+            .replace(/[-_]+/g, " ")
+            .toLowerCase();
+        const groups = visibleGroups.map(group => cleanGroupLabel(
+            wikiGroupLabels[`group-${group}-member`] || fallbackGroupLabels[group] || group
+        )).map((group, index) => index === 0
+            ? group.charAt(0).toUpperCase() + group.slice(1)
+            : group);
+
         return {
             username: user.name || normalized,
-            groups: Array.isArray(user.groups) ? user.groups : [],
+            groups: [...new Set(groups)],
             editCount: Number.isFinite(Number(user.editcount)) ? Number(user.editcount) : null,
             avatarUrl,
             profileUrl,
+            contribsUrl: `${wikiConfig.articlePath}Special:Contributions/${encodeURIComponent(user.name || normalized)}`,
             content: page?.extract || ""
         };
     } catch (err) {
         console.warn("getUserProfile failed:", err.message);
         return null;
+    }
+}
+
+async function getSectionChoices(pageTitle, prefix, wikiConfig) {
+    if (!pageTitle || !wikiConfig) return [];
+    const canonical = await findCanonicalTitle(pageTitle, wikiConfig) || pageTitle;
+    const params = new URLSearchParams({ action: "parse", format: "json", prop: "sections", page: canonical });
+    try {
+        const res = await fetch(`${wikiConfig.apiEndpoint}?${params}`, { headers: { "User-Agent": BOT_USER_AGENT } });
+        const sections = (await res.json()).parse?.sections || [];
+        const search = String(prefix || "").toLowerCase();
+        return sections
+            .map(section => {
+                const name = section.line.replace(/<[^>]*>?/gm, "");
+                return { name, value: name };
+            })
+            .filter(choice => choice.name.toLowerCase().includes(search))
+            .slice(0, 25);
+    } catch (err) {
+        console.warn("getSectionChoices failed:", err.message);
+        return [];
     }
 }
 
@@ -364,7 +433,7 @@ async function getWikiContent(pageTitle, wikiConfig) {
     try {
         const res = await fetch(`${wikiConfig.apiEndpoint}?${params.toString()}`, {
             headers: {
-                "User-Agent": "DiscordBot/Derik",
+                "User-Agent": BOT_USER_AGENT,
                 "Origin": wikiConfig.baseUrl,
             },
         });
@@ -393,7 +462,7 @@ async function getSectionIndex(pageTitle, sectionName, wikiConfig) {
 
     try {
         const res = await fetch(`${wikiConfig.apiEndpoint}?${params}`, {
-            headers: { "User-Agent": "DiscordBot/Derik" }
+            headers: { "User-Agent": BOT_USER_AGENT }
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
         const json = await res.json();
@@ -434,7 +503,7 @@ async function getSectionContent(pageTitle, sectionName, wikiConfig) {
 
     try {
         const res = await fetch(`${wikiConfig.apiEndpoint}?${params}`, {
-            headers: { "User-Agent": "DiscordBot/Derik" }
+            headers: { "User-Agent": BOT_USER_AGENT }
         });
         const json = await res.json();
 
@@ -490,7 +559,7 @@ async function getLeadSection(pageTitle, wikiConfig) {
 
     try {
         const res = await fetch(`${wikiConfig.apiEndpoint}?${params.toString()}`, {
-            headers: { "User-Agent": "DiscordBot/Derik" }
+            headers: { "User-Agent": BOT_USER_AGENT }
         });
         const json = await res.json();
         const pages = json.query?.pages;
@@ -619,8 +688,11 @@ module.exports = {
     getLeadSection, 
     getRandomPage,
     getUserProfile,
+    getSectionChoices,
     parseWikiLinks, 
     parseTemplates,
     getFullSizeImageUrl,
     linkIntroductionPageName
 };
+
+
