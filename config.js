@@ -16,7 +16,7 @@ const WIKIS = {
         apiEndpoint: "https://farm.miraheze.org/w/api.php",
         articlePath: "https://farm.miraheze.org/",
         prefix: "ufg",
-        emoji: "1488793250163593226"
+        emoji: "1538200099190997153"
     }
 };
 
@@ -25,6 +25,9 @@ const CATEGORY_WIKI_MAP = {
 };
 
 const toggleContribScore = true;
+
+const SPEEDRUN_EMOJI = "1488791940622454835";
+
 const STATUS_INTERVAL_MS = 5 * 60 * 1000;
 
 // --- DISCORD STATUSES ---
@@ -62,6 +65,7 @@ module.exports = {
     WIKIS,
     CATEGORY_WIKI_MAP,
     toggleContribScore,
+    SPEEDRUN_EMOJI,
     STATUS_INTERVAL_MS,
     STATUS_OPTIONS
 };
