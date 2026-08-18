@@ -1,5 +1,6 @@
 const { fetch } = require("./utils.js");
-const { BOT_NAME } = require("../config.js");
+const { BOT_NAME, CONTRIBSCORES_SCORE_EMOJI } = require("../config.js");
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require("discord.js");
 
 async function getContributionScores(wikiConfig) {
     try {
@@ -25,8 +26,8 @@ async function getContributionScores(wikiConfig) {
         const rows = html.split('<tr class="">');
         rows.shift(); // Remove header
 
-        let dataSummary = `## Edit leaderboard for [${wikiConfig.name}](${wikiConfig.articlePath}Special:ContributionScores) <:emoji:${wikiConfig.emoji}>\n`;
-        dataSummary += `-# Top 10 users over the past 7 days\n\n`;
+        let dataSummary = `## Edit leaderboard for [${wikiConfig.name}](${wikiConfig.articlePath}Special:ContributionScores)\n`;
+        dataSummary += `-# Top 10 users over the past 7 days\n`;
         
         // Extract raw data into an array
         const userData = rows.map((row) => {
@@ -49,7 +50,7 @@ async function getContributionScores(wikiConfig) {
             const paddedScore = data.score.padStart(maxScoreLength, ' ');
             const paddedEdits = data.edits.padStart(maxEditLength, ' ');
         
-            dataSummary += `${i + 1}. <:cash:1488794096548974592> \`${paddedScore}\`    ✏️ \`${paddedEdits}\`    **[@${data.user}](${wikiConfig.articlePath}User:${data.user})**\n`;
+            dataSummary += `${i + 1}. <:playerpoint:${CONTRIBSCORES_SCORE_EMOJI}> \`${paddedScore}\`    ✏️ \`${paddedEdits}\`    **[@${data.user}](${wikiConfig.articlePath}User:${data.user})**\n`;
         });
 
         if (!dataSummary) return {
@@ -88,6 +89,12 @@ async function handleContribScoresRequest(interaction, { toggleContribScore, WIK
             await interaction.editReply({ content: result.error });
         } else {
             const container = buildPageEmbed(result.title, result.result, null, wikiConfig);
+            container.addActionRowComponents(new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                    .setCustomId("contribs:help")
+                    .setLabel("What does this mean?")
+                    .setStyle(ButtonStyle.Secondary)
+            ));
             const response = await interaction.editReply({
                 components: [container],
                 flags: MessageFlags.IsComponentsV2

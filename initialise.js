@@ -1,14 +1,14 @@
 require("dotenv").config();
 
-const { setRandomStatus } = require("./functions/presence.js");
-const { commands } = require("./functions/commands.js");
+const { setRandomStatus } = require("./bot/presence.js");
+const { commands } = require("./bot/commands.js");
 const { 
     handleInteraction,
     handleUserRequest,
     responseMap,
     botToAuthorMap,
     pruneMap
-} = require("./functions/interactions.js");
+} = require("./bot/interactions.js");
 
 const {
     Client,
@@ -18,7 +18,8 @@ const {
 
 const {
     WIKIS,
-    CATEGORY_WIKI_MAP,
+    WIKI_MAP,
+    DEFAULT_WIKI,
     STATUS_INTERVAL_MS
 } = require("./config.js");
 
@@ -67,8 +68,14 @@ client.once("ready", async () => {
     }
 });
 
-// -------------------- EVENTS --------------------
+// Events
+function isUnknownMessageError(error) {
+    return error?.code === 10008 || error?.rawError?.code === 10008;
+}
+
 function getWikiAndPage(messageContent, channel) {
+    if (typeof messageContent !== "string") return null;
+
     const match = messageContent.match(syntaxRegex);
     if (!match) return null;
 
@@ -90,8 +97,11 @@ function getWikiAndPage(messageContent, channel) {
             channel?.parent?.parentId,
             channel?.parent?.parent?.id
         ].filter(Boolean).map(String);
-        const configuredId = channelAndCategoryIds.find(id => CATEGORY_WIKI_MAP[id]);
-        const wikiKey = CATEGORY_WIKI_MAP[configuredId] || "untitled-tag-game";
+        // Keep message handling alive if an older/misconfigured deployment has
+        // no WIKI_MAP export yet. The default wiki still handles the message.
+        const wikiMap = WIKI_MAP || {};
+        const configuredId = channelAndCategoryIds.find(id => wikiMap[id]);
+        const wikiKey = wikiMap[configuredId] || DEFAULT_WIKI;
         wikiConfig = WIKIS[wikiKey];
     }
 
@@ -106,19 +116,27 @@ function getWikiAndPage(messageContent, channel) {
 }
 
 client.on("messageCreate", async (message) => {
-    if (message.author.bot) return;
+    try {
+        if (message.author?.bot) return;
 
-    const res = getWikiAndPage(message.content, message.channel);
-    if (!res) return;
+        const res = getWikiAndPage(message.content, message.channel);
+        if (!res) return;
 
-    const { wikiConfig, rawPageName } = res;
-    if (wikiConfig) {
-        const response = await handleUserRequest(wikiConfig, rawPageName, message);
-        if (response && response.id) {
-            responseMap.set(message.id, response.id);
-            botToAuthorMap.set(response.id, message.author.id);
-            pruneMap(responseMap);
-            pruneMap(botToAuthorMap);
+        const { wikiConfig, rawPageName } = res;
+        if (wikiConfig) {
+            const response = await handleUserRequest(wikiConfig, rawPageName, message);
+            if (response && response.id) {
+                responseMap.set(message.id, response.id);
+                botToAuthorMap.set(response.id, message.author.id);
+                pruneMap(responseMap);
+                pruneMap(botToAuthorMap);
+            }
+        }
+    } catch (err) {
+        // A user can delete the source message while the wiki request is in
+        // flight. Discord then rejects the eventual reply with 10008.
+        if (!isUnknownMessageError(err)) {
+            console.error("Error handling message:", err);
         }
     }
 });
@@ -171,7 +189,9 @@ client.on("messageReactionAdd", async (reaction, user) => {
         try {
             await reaction.fetch();
         } catch (error) {
-            console.error('Something went wrong when fetching the reaction:', error);
+            if (!isUnknownMessageError(error)) {
+                console.error("Something went wrong when fetching the reaction:", error);
+            }
             return;
         }
     }
@@ -183,7 +203,6 @@ client.on("messageReactionAdd", async (reaction, user) => {
         if (!message.author?.id || message.author.id !== client.user.id) return;
 
         let originalAuthorId = botToAuthorMap.get(message.id);
-
 
         if (!originalAuthorId && message.reference?.messageId) {
             try {

@@ -20,13 +20,25 @@ const WIKIS = {
     }
 };
 
-const CATEGORY_WIKI_MAP = {
+// Map a channel or category ID to a wiki.
+const WIKI_MAP = {
     "1335895166292332585": "untitled-farming-game"
 };
 
-const toggleContribScore = true;
+const DEFAULT_WIKI = "untitled-tag-game";
+
+// Enable or disable slash commands. Disabled commands are not registered with Discord.
+const COMMANDS = {
+    speedrun: true,
+    contribs: true,
+    wiki: true,
+    parse: true,
+    user: true,
+    random: true,
+};
 
 const SPEEDRUN_EMOJI = "1488791940622454835";
+const CONTRIBSCORES_SCORE_EMOJI = "1472433775593000961";
 
 const STATUS_INTERVAL_MS = 5 * 60 * 1000;
 
@@ -63,9 +75,11 @@ const STATUS_OPTIONS = [
 module.exports = {
     BOT_NAME,
     WIKIS,
-    CATEGORY_WIKI_MAP,
-    toggleContribScore,
+    WIKI_MAP,
+    DEFAULT_WIKI,
+    COMMANDS,
     SPEEDRUN_EMOJI,
+    CONTRIBSCORES_SCORE_EMOJI,
     STATUS_INTERVAL_MS,
     STATUS_OPTIONS
 };
