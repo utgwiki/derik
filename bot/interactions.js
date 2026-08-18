@@ -2,22 +2,16 @@ const {
     findCanonicalTitle,
     getPageData,
     getSectionContent,
-    getRandomPage,
-    getUserProfile,
     getSectionChoices,
     linkIntroductionPageName,
-} = require("./parse_page.js");
-const { handleFileRequest } = require("./parse_file.js");
-const { handleContribScoresRequest } = require("./contribscores.js");
-const {
-    handleSpeedrunRequest,
-} = require("./speedrun.js");
-const {
-    WIKIS,
-    toggleContribScore,
-    BOT_NAME
-} = require("../config.js");
-const { fetch, truncateToParagraphs: truncateContentToParagraphs } = require("./utils.js");
+} = require("../functions/page.js");
+const { getRandomPage } = require("../functions/random.js");
+const { getUserProfile } = require("../functions/user.js");
+const { handleFileRequest } = require("../functions/file.js");
+const { handleContribScoresRequest } = require("../functions/contribs.js");
+const { handleSpeedrunRequest } = require("../functions/speedrun.js");
+const { WIKIS, COMMANDS, BOT_NAME, CONTRIBSCORES_SCORE_EMOJI, toggleContribScore } = require("../config.js");
+const { fetch, truncateToParagraphs: truncateContentToParagraphs } = require("../functions/utils.js");
 
 const {
     ContainerBuilder,
@@ -220,7 +214,7 @@ function buildPageEmbed(title, content, imageUrl, wikiConfig, gallery = null, bu
 
             const row = new ActionRowBuilder();
             const btn = new ButtonBuilder()
-                .setLabel(String(title).slice(0, 80))
+                .setLabel((title === "Special:ContributionScores" ? "View list" : String(title)).slice(0, 80))
                 .setStyle(ButtonStyle.Link)
                 .setURL(pageUrl);
 
@@ -429,6 +423,17 @@ async function handleUserRequest(wikiConfig, rawPageName, messageOrInteraction, 
 }
 
 async function handleInteraction(interaction) {
+    if (interaction.isCommand() && COMMANDS[interaction.commandName] === false) {
+        return interaction.reply({ content: 'This command is currently disabled.', ephemeral: true }).catch(() => {});
+    }
+
+    if (interaction.isButton() && interaction.customId === 'contribs:help') {
+        return interaction.reply({
+            content: `In contribution score lists, <:playerpoint:${CONTRIBSCORES_SCORE_EMOJI}> is the score: \`unique pages edited + 2 × √(total edits − unique pages edited)\`. ✏️ is the number of edits (revisions) counted for the selected period.`,
+            ephemeral: true
+        }).catch(() => {});
+    }
+
     if (interaction.isAutocomplete()) {
         if (interaction.commandName === 'parse' || interaction.commandName === 'wiki' || interaction.commandName === 'user') {
             const focusedOption = interaction.options.getFocused(true);

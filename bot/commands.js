@@ -1,57 +1,29 @@
-const { WIKIS } = require("../config.js");
+const { WIKIS, COMMANDS } = require("../config.js");
 const {
     UTG_CATEGORIES,
     UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES,
     UFG_CATEGORIES
-} = require("./speedrun.js");
+} = require("../functions/speedrun.js");
 
 const wikiChoices = Object.entries(WIKIS).map(([key, wiki]) => ({
     name: wiki.name,
     value: key
 }));
 
-const commands = [
+const allCommands = [
     {
         name: 'speedrun',
         description: 'View speedrun leaderboards',
         integrationTypes: [0, 1],
         contexts: [0, 1, 2],
         options: [
-            {
-                name: 'utg',
-                description: 'untitled tag game\'s speedrun leaderboard',
-                type: 1, // SUB_COMMAND
-                options: [
-                    {
-                        name: 'category',
-                        description: 'The category to view',
-                        type: 3, // STRING
-                        required: true,
-                        choices: UTG_CATEGORIES
-                    },
-                    {
-                        name: 'subcategory',
-                        description: 'The subcategory to view (if applicable)',
-                        type: 3, // STRING
-                        required: false,
-                        choices: UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES
-                    }
-                ]
-            },
-            {
-                name: 'ufg',
-                description: 'untitled farming game\'s speedrun leaderboard',
-                type: 1, // SUB_COMMAND
-                options: [
-                    {
-                        name: 'category',
-                        description: 'The category to view',
-                        type: 3, // STRING
-                        required: true,
-                        choices: UFG_CATEGORIES
-                    }
-                ]
-            }
+            { name: 'utg', description: "untitled tag game's speedrun leaderboard", type: 1, options: [
+                { name: 'category', description: 'The category to view', type: 3, required: true, choices: UTG_CATEGORIES },
+                { name: 'subcategory', description: 'The subcategory to view (if applicable)', type: 3, required: false, choices: UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES }
+            ] },
+            { name: 'ufg', description: "untitled farming game's speedrun leaderboard", type: 1, options: [
+                { name: 'category', description: 'The category to view', type: 3, required: true, choices: UFG_CATEGORIES }
+            ] }
         ]
     },
     {
@@ -162,6 +134,6 @@ const commands = [
     }
 ];
 
-module.exports = {
-    commands
-};
+const commands = allCommands.filter(command => COMMANDS[command.name] !== false);
+
+module.exports = { commands };

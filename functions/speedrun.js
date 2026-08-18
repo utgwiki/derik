@@ -1,6 +1,7 @@
 const { fetch } = require("./utils.js");
-const { ContainerBuilder, TextDisplayBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require("discord.js");
-const { WIKIS, SPEEDRUN_EMOJI } = require("../config.js");
+const { ContainerBuilder, SectionBuilder, TextDisplayBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } = require("discord.js");
+const { WIKIS, SPEEDRUN_EMOJI, BOT_NAME } = require("../config.js");
+const { getPageData } = require("./page.js");
 
 const UTG_CATEGORY_IDS = {
     FIRST_TO_THE_TOKEN: 'w2077y8k',
@@ -73,7 +74,7 @@ async function getLeaderboardData(gameId, categoryId, levelId = null, variables 
     }
 
     const res = await fetch(url, {
-        headers: { "User-Agent": "DiscordBot/Derik" },
+        headers: { "User-Agent": `${BOT_NAME} Discord bot` },
         signal: AbortSignal.timeout(5000)
     });
     if (!res.ok) {
@@ -138,16 +139,21 @@ async function handleSpeedrunRequest(interaction, gameKey, categoryId, levelId =
         });
 
         const container = new ContainerBuilder();
-        container.addTextDisplayComponents(new TextDisplayBuilder().setContent(description));
+        const leaderboardSection = new SectionBuilder();
+        leaderboardSection.addTextDisplayComponents([new TextDisplayBuilder().setContent(description)]);
+
+        const wikiConfig = WIKIS[GAME_WIKI_MAP[gameKey]];
+        const mapPage = await getPageData(mainTitle, wikiConfig);
+        if (mapPage?.imageUrl) {
+            leaderboardSection.setThumbnailAccessory(thumbnail => thumbnail.setURL(mapPage.imageUrl));
+        }
+        container.addSectionComponents(leaderboardSection);
 
         const row = new ActionRowBuilder();
         const button = new ButtonBuilder()
-            .setLabel("View full leaderboard")
+            .setLabel("View list")
             .setStyle(ButtonStyle.Link)
             .setURL(leaderboard.weblink);
-
-        const wikiKey = GAME_WIKI_MAP[gameKey];
-        const wikiConfig = WIKIS[wikiKey];
         if (SPEEDRUN_EMOJI || (wikiConfig && wikiConfig.emoji)) {
             button.setEmoji(SPEEDRUN_EMOJI || wikiConfig.emoji);
         }
@@ -180,3 +186,5 @@ module.exports = {
     UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES,
     UFG_CATEGORIES
 };
+
+
