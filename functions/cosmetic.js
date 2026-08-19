@@ -31,21 +31,27 @@ async function bucketQuery(query, wikiConfig) {
     });
     if (!response.ok) throw new Error(`Bucket API returned HTTP ${response.status}`);
     const json = await response.json();
-    if (json.error || json.error?.info) throw new Error(json.error.info || "Bucket query failed");
+    if (json.error) {
+        const details = typeof json.error === "string"
+            ? json.error
+            : json.error.info || json.error.code || JSON.stringify(json.error);
+        console.error(`Bucket query failed (${query}): ${details}`);
+        throw new Error(`Bucket query failed: ${details}`);
+    }
     return json.bucket || [];
 }
 
 async function findOutfit(name, game, wikiConfig) {
     if (game && game !== "Legacy" && game !== "Recode") return null;
-    const conditions = [`["name", "=", ${luaString(name)}]`];
-    if (game) conditions.push(`["game", "=", ${luaString(game)}]`);
-    const where = conditions.length === 1 ? conditions[0] : `{op = "AND", operands = {${conditions.join(", ")}}}`;
-    const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}):where(${where}):limit(1):run()`, wikiConfig);
+    const where = game
+        ? `{name = ${luaString(name)}, version = ${luaString(game)}}`
+        : `{name = ${luaString(name)}}`;
+    const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}).select("name", "cost", "rarity", "description", "image", "creator", "version", "currency", "variants").where(${where}).limit(1).run()`, wikiConfig);
     return Array.isArray(rows) ? rows[0] || null : rows;
 }
 
 async function getOutfitChoices(prefix, wikiConfig) {
-    const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}):select("name"):limit(500):run()`, wikiConfig);
+    const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}).select("name").limit(500).run()`, wikiConfig);
     const search = String(prefix || "").trim().toLowerCase();
     const names = new Map();
     for (const row of Array.isArray(rows) ? rows : []) {
@@ -77,12 +83,12 @@ function pageUrl(title, wikiConfig, withUtm = true) {
 async function buildOutfitResponse(outfit, wikiConfig) {
     const name = String(valueOf(outfit, "name", "title") || "Unknown outfit");
     const rarity = valueOf(outfit, "rarity") || "Unknown";
-    const game = valueOf(outfit, "game") || "Unknown";
+    const game = valueOf(outfit, "version", "game") || "Unknown";
     const cost = valueOf(outfit, "cost", "price") || "Unknown";
     const creator = valueOf(outfit, "creator", "made_by", "madeBy");
     const description = valueOf(outfit, "description") || "No description available.";
     const pageName = valueOf(outfit, "page_name", "page", "article", "wiki_page") || name;
-    const icon = valueOf(outfit, "icon", "image", "image_url", "imageUrl", "thumbnail");
+    const icon = valueOf(outfit, "image", "icon", "image_url", "imageUrl", "thumbnail");
 
     const pageData = await getPageData(pageName, wikiConfig);
     const canonical = pageData?.canonical || pageName;
