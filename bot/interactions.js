@@ -439,11 +439,17 @@ async function handleInteraction(interaction) {
         if (interaction.commandName === 'cosmetic') {
             const focusedOption = interaction.options.getFocused(true);
             if (focusedOption.name !== 'name') return interaction.respond([]).catch(() => {});
+            let choices = [];
             try {
-                return interaction.respond(await getOutfitChoices(focusedOption.value, WIKIS["untitled-tag-game"]));
+                choices = await getOutfitChoices(focusedOption.value, WIKIS["untitled-tag-game"]);
             } catch (err) {
                 console.error('Failed to autocomplete cosmetic outfit:', err);
-                return interaction.respond([]).catch(() => {});
+            }
+            try {
+                return await interaction.respond(choices);
+            } catch (err) {
+                if (err?.code !== 10062) console.error('Failed to respond to cosmetic outfit autocomplete:', err);
+                return;
             }
         }
         if (interaction.commandName === 'parse' || interaction.commandName === 'wiki' || interaction.commandName === 'user') {

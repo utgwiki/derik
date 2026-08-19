@@ -4,6 +4,7 @@ const { getPageData, linkIntroductionPageName, getFullSizeImageUrl } = require("
 
 const OUTFIT_BUCKET = "outfit";
 const UTG_COINS_EMOJI = "1539619263609053244";
+const OUTFIT_NAMES_CACHE = { fetchedAt: 0, rows: null };
 const RARITY_ACCENT_COLORS = {
     Common: 0xD7EEFA,
     Uncommon: 0x73FF88,
@@ -83,7 +84,11 @@ async function findOutfit(name, game, wikiConfig) {
 }
 
 async function getOutfitChoices(prefix, wikiConfig) {
-    const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}).select("name").limit(500).run()`, wikiConfig);
+    if (!OUTFIT_NAMES_CACHE.rows || Date.now() - OUTFIT_NAMES_CACHE.fetchedAt > 5 * 60 * 1000) {
+        OUTFIT_NAMES_CACHE.rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}).select("name").limit(500).run()`, wikiConfig);
+        OUTFIT_NAMES_CACHE.fetchedAt = Date.now();
+    }
+    const rows = OUTFIT_NAMES_CACHE.rows;
     const search = decodeHtmlEntities(prefix || "").trim().toLowerCase();
     const names = new Map();
     for (const row of Array.isArray(rows) ? rows : []) {
