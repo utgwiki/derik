@@ -4,6 +4,24 @@ const { getPageData, linkIntroductionPageName, getFullSizeImageUrl } = require("
 
 const OUTFIT_BUCKET = "outfit";
 const UTG_COINS_EMOJI = "1539619263609053244";
+const RARITY_ACCENT_COLORS = {
+    Common: "#d7eefa",
+    Uncommon: "#73ff88",
+    Rare: "#0051ff",
+    Epic: "#9972fc",
+    Legendary: "#ffef42",
+    Mythic: "#ff4242",
+    Outrageous: "#42f2ff",
+    Special: "#ff20aa",
+    Initiation: "#fb5c00",
+    Hallows: "#a550d3",
+    Holiday: "#46aacf",
+    Valentines: "#ff50bc",
+    DOORS: "#131431",
+    "Slap Battles": "#c3ff00",
+    Transcendental: "#E57EFF",
+    Admin: "#4C4C4C"
+};
 
 function luaString(value) {
     return JSON.stringify(String(value));
@@ -103,8 +121,10 @@ function formatCost(cost) {
 }
 
 function formatDescription(description) {
-    let text = String(description || "").replace(/\n+/g, " ").trim();
-    if (text.startsWith('"') && text.endsWith('"')) text = text.slice(1, -1);
+    if (description === null || description === undefined) return null;
+    let text = String(description).replace(/\n+/g, " ").trim();
+    if (text.startsWith('"') && text.endsWith('"')) text = text.slice(1, -1).trim();
+    if (!text || text === "''''") return null;
     return text
         .replace(/'''([^']+)'''/g, "**$1**")
         .replace(/''([^']+)''/g, "*$1*");
@@ -133,14 +153,16 @@ async function buildOutfitResponse(outfit, wikiConfig) {
     const creatorText = await formatCreators(creator, wikiConfig);
 
     const container = new (require("discord.js").ContainerBuilder)();
+    const accentColor = RARITY_ACCENT_COLORS[rarity];
+    if (accentColor) container.setAccentColor(accentColor);
     const section = new (require("discord.js").SectionBuilder)();
     const metadata = `-# ${[rarity, game].filter(Boolean).join(" ")} outfit${cost ? `; <:utgcoins:${UTG_COINS_EMOJI}> ${cost}` : ""}`;
     const header = [
         `## [${name}](${pageUrl(canonical, wikiConfig, true)})`,
         metadata,
-        `${creatorText ? `-# By ${creatorText}` : ""}`,
-        `> "${description}"`
-    ].join("\n");
+        creatorText ? `-# By ${creatorText}` : "",
+        description ? `> "${description}"` : ""
+    ].filter(Boolean).join("\n");
     section.addTextDisplayComponents(new (require("discord.js").TextDisplayBuilder)().setContent(header));
     if (imageUrl) section.setThumbnailAccessory(thumbnail => thumbnail.setURL(imageUrl));
     container.addSectionComponents(section);
