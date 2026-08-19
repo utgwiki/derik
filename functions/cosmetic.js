@@ -46,7 +46,7 @@ async function findOutfit(name, game, wikiConfig) {
     const where = game
         ? `{name = ${luaString(name)}, version = ${luaString(game)}}`
         : `{name = ${luaString(name)}}`;
-    const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}).select("name", "cost", "rarity", "description", "image", "creator", "version", "currency", "variants").where(${where}).limit(1).run()`, wikiConfig);
+    const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}).select("name", "page_name", "cost", "rarity", "description", "image", "creator", "version", "currency", "variants").where(${where}).limit(1).run()`, wikiConfig);
     return Array.isArray(rows) ? rows[0] || null : rows;
 }
 
@@ -73,6 +73,21 @@ async function getCommunityPage(creator, wikiConfig) {
     const pageId = json.query?.pageids?.[0];
     const page = json.query?.pages?.[pageId];
     return page && page.missing === undefined ? page.title : null;
+}
+
+function cleanCreatorName(creator) {
+    const match = String(creator).trim().match(/^\[\[([^\]|]+)(?:\|([^\]]+))?\]\]$/);
+    return (match ? (match[2] || match[1]) : String(creator)).trim();
+}
+
+async function formatCreators(creator, wikiConfig) {
+    if (!creator) return "";
+    const creators = String(creator).split(/\s*&\s*/).map(cleanCreatorName).filter(Boolean);
+    const formatted = await Promise.all(creators.map(async name => {
+        const communityPage = await getCommunityPage(name, wikiConfig);
+        return communityPage ? `[${name}](${pageUrl(communityPage, wikiConfig, true)})` : name;
+    }));
+    return formatted.join(" & ");
 }
 
 function pageUrl(title, wikiConfig, withUtm = true) {
@@ -115,19 +130,15 @@ async function buildOutfitResponse(outfit, wikiConfig) {
     }
     imageUrl ||= pageData?.imageUrl || null;
 
-    let creatorText = creator ? String(creator) : "";
-    if (creator) {
-        const communityPage = await getCommunityPage(String(creator), wikiConfig);
-        if (communityPage) creatorText = `[${creator}](${pageUrl(communityPage, wikiConfig, true)})`;
-    }
+    const creatorText = await formatCreators(creator, wikiConfig);
 
     const container = new (require("discord.js").ContainerBuilder)();
     const section = new (require("discord.js").SectionBuilder)();
-    const metadata = `-# ${[rarity, game].filter(Boolean).join(" ")} outfit;${cost ? ` ${cost} <:utgcoins:${UTG_COINS_EMOJI}>` : ""}`;
+    const metadata = `-# ${[rarity, game].filter(Boolean).join(" ")} outfit${cost ? `; <:utgcoins:${UTG_COINS_EMOJI}> ${cost}` : ""}`;
     const header = [
         `## [${name}](${pageUrl(canonical, wikiConfig, true)})`,
         metadata,
-        `-# By ${creatorText}`,
+        `${creatorText ? `-# By ${creatorText}` : ""}`,
         `> "${description}"`
     ].join("\n");
     section.addTextDisplayComponents(new (require("discord.js").TextDisplayBuilder)().setContent(header));
