@@ -33,6 +33,7 @@ const COMMANDS = {
     parse: true,
     user: true,
     random: true,
+    cosmetic: true,
 };
 
 const toggleContribScore = true;

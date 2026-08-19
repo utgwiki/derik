@@ -10,6 +10,7 @@ const { getUserProfile } = require("../functions/user.js");
 const { handleFileRequest } = require("../functions/file.js");
 const { handleContribScoresRequest } = require("../functions/contribs.js");
 const { handleSpeedrunRequest } = require("../functions/speedrun.js");
+const { findOutfit, getOutfitChoices, buildOutfitResponse } = require("../functions/cosmetic.js");
 const { WIKIS, COMMANDS, BOT_NAME, CONTRIBSCORES_SCORE_EMOJI, toggleContribScore } = require("../config.js");
 const { fetch, truncateToParagraphs: truncateContentToParagraphs } = require("../functions/utils.js");
 
@@ -435,6 +436,11 @@ async function handleInteraction(interaction) {
     }
 
     if (interaction.isAutocomplete()) {
+        if (interaction.commandName === 'cosmetic') {
+            const focusedOption = interaction.options.getFocused(true);
+            if (focusedOption.name !== 'name') return interaction.respond([]).catch(() => {});
+            return interaction.respond(await getOutfitChoices(focusedOption.value, WIKIS["untitled-tag-game"])).catch(() => {});
+        }
         if (interaction.commandName === 'parse' || interaction.commandName === 'wiki' || interaction.commandName === 'user') {
             const focusedOption = interaction.options.getFocused(true);
             const wikiKey = interaction.options.getString('wiki');
@@ -467,6 +473,25 @@ async function handleInteraction(interaction) {
             return;
         } catch (err) {
             return sendInteractionError(interaction, err, 'contribs');
+        }
+    } else if (interaction.commandName === 'cosmetic') {
+        try {
+            const subCommand = interaction.options.getSubcommand();
+            if (subCommand !== 'outfit') return interaction.reply({ content: 'Unknown cosmetic type.', ephemeral: true });
+            if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
+            const name = interaction.options.getString('name');
+            const game = interaction.options.getString('game');
+            const wikiConfig = WIKIS["untitled-tag-game"];
+            const outfit = await findOutfit(name, game, wikiConfig);
+            if (!outfit) return interaction.editReply({ content: `Outfit "${name}" not found.`, components: [] });
+            const container = await buildOutfitResponse(outfit, wikiConfig);
+            const response = await interaction.editReply({ content: "", components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } });
+            if (response && response.id) {
+                botToAuthorMap.set(response.id, interaction.user.id);
+                pruneMap(botToAuthorMap);
+            }
+        } catch (err) {
+            return sendInteractionError(interaction, err, 'cosmetic');
         }
     } else if (interaction.commandName === 'speedrun') {
         try {
@@ -592,4 +617,3 @@ module.exports = {
     botToAuthorMap,
     pruneMap
 };
-

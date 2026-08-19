@@ -114,6 +114,23 @@ const allCommands = [
         ]
     },
     {
+        name: 'cosmetic',
+        description: 'View game cosmetics',
+        integrationTypes: [0, 1],
+        contexts: [0, 1, 2],
+        options: [
+            {
+                name: 'outfit',
+                description: 'View an outfit',
+                type: 1,
+                options: [
+                    { name: 'name', description: 'The outfit to view', type: 3, required: true, autocomplete: true },
+                    { name: 'game', description: 'Filter by game', type: 3, required: false, choices: [{ name: 'Legacy', value: 'Legacy' }, { name: 'Recode', value: 'Recode' }] }
+                ]
+            }
+        ]
+    },
+    {
         name: 'user',
         description: 'View a wiki user profile',
         integrationTypes: [0, 1],
