@@ -80,13 +80,29 @@ function pageUrl(title, wikiConfig, withUtm = true) {
     return `${wikiConfig.articlePath}${parts.join(":")}${withUtm ? `?utm_source=${encodeURIComponent(BOT_NAME)}` : ""}`;
 }
 
+function formatCost(cost) {
+    if (cost === null || cost === undefined || cost === "") return "";
+    const numericCost = Number(cost);
+    if (Number.isFinite(numericCost)) return numericCost.toLocaleString("en-US");
+    return String(cost);
+}
+
+function formatDescription(description) {
+    let text = String(description || "").replace(/\n+/g, " ").trim();
+    if (text.startsWith('"') && text.endsWith('"')) text = text.slice(1, -1);
+    return text
+        .replace(/'''([^']+)'''/g, "**$1**")
+        .replace(/''([^']+)''/g, "*$1*");
+}
+
 async function buildOutfitResponse(outfit, wikiConfig) {
-    const name = String(valueOf(outfit, "name", "title") || "Unknown outfit");
-    const rarity = valueOf(outfit, "rarity") || "Unknown";
-    const game = valueOf(outfit, "version", "game") || "Unknown";
-    const cost = valueOf(outfit, "cost", "price") || "Unknown";
+    const name = String(valueOf(outfit, "name", "title") || "");
+    const rarity = String(valueOf(outfit, "rarity") || "");
+    const game = String(valueOf(outfit, "version", "game") || "");
+    const rawCost = valueOf(outfit, "cost", "price");
+    const cost = formatCost(rawCost);
     const creator = valueOf(outfit, "creator", "made_by", "madeBy");
-    const description = valueOf(outfit, "description") || "No description available.";
+    const description = formatDescription(valueOf(outfit, "description"));
     const pageName = valueOf(outfit, "page_name", "page", "article", "wiki_page") || name;
     const icon = valueOf(outfit, "image", "icon", "image_url", "imageUrl", "thumbnail");
 
@@ -99,7 +115,7 @@ async function buildOutfitResponse(outfit, wikiConfig) {
     }
     imageUrl ||= pageData?.imageUrl || null;
 
-    let creatorText = creator ? String(creator) : "Unknown";
+    let creatorText = creator ? String(creator) : "";
     if (creator) {
         const communityPage = await getCommunityPage(String(creator), wikiConfig);
         if (communityPage) creatorText = `[${creator}](${pageUrl(communityPage, wikiConfig, true)})`;
@@ -107,12 +123,12 @@ async function buildOutfitResponse(outfit, wikiConfig) {
 
     const container = new (require("discord.js").ContainerBuilder)();
     const section = new (require("discord.js").SectionBuilder)();
+    const metadata = `-# ${[rarity, game].filter(Boolean).join(" ")} outfit;${cost ? ` ${cost} <:utgcoins:${UTG_COINS_EMOJI}>` : ""}`;
     const header = [
         `## [${name}](${pageUrl(canonical, wikiConfig, true)})`,
-        `-# ${rarity} ${game} outfit; ${cost}`,
-        `- <:utgcoins:${UTG_COINS_EMOJI}>`,
-        `- Made by ${creatorText}`,
-        `> "${String(description).replace(/\n+/g, " ")}"`
+        metadata,
+        `-# By ${creatorText}`,
+        `> "${description}"`
     ].join("\n");
     section.addTextDisplayComponents(new (require("discord.js").TextDisplayBuilder)().setContent(header));
     if (imageUrl) section.setThumbnailAccessory(thumbnail => thumbnail.setURL(imageUrl));
