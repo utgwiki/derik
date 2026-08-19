@@ -5,22 +5,22 @@ const { getPageData, linkIntroductionPageName, getFullSizeImageUrl } = require("
 const OUTFIT_BUCKET = "outfit";
 const UTG_COINS_EMOJI = "1539619263609053244";
 const RARITY_ACCENT_COLORS = {
-    Common: "#d7eefa",
-    Uncommon: "#73ff88",
-    Rare: "#0051ff",
-    Epic: "#9972fc",
-    Legendary: "#ffef42",
-    Mythic: "#ff4242",
-    Outrageous: "#42f2ff",
-    Special: "#ff20aa",
-    Initiation: "#fb5c00",
-    Hallows: "#a550d3",
-    Holiday: "#46aacf",
-    Valentines: "#ff50bc",
-    DOORS: "#131431",
-    "Slap Battles": "#c3ff00",
-    Transcendental: "#E57EFF",
-    Admin: "#4C4C4C"
+    Common: 0xD7EEFA,
+    Uncommon: 0x73FF88,
+    Rare: 0x0051FF,
+    Epic: 0x9972FC,
+    Legendary: 0xFFEF42,
+    Mythic: 0xFF4242,
+    Outrageous: 0x42F2FF,
+    Special: 0xFF20AA,
+    Initiation: 0xFB5C00,
+    Hallows: 0xA550D3,
+    Holiday: 0x46AACF,
+    Valentines: 0xFF50BC,
+    DOORS: 0x131431,
+    "Slap Battles": 0xC3FF00,
+    Transcendental: 0xE57EFF,
+    Admin: 0x4C4C4C
 };
 
 function luaString(value) {
