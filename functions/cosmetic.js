@@ -36,6 +36,17 @@ function valueOf(row, ...names) {
     return null;
 }
 
+function decodeHtmlEntities(value) {
+    return String(value)
+        .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
+        .replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
+        .replace(/&apos;/gi, "'")
+        .replace(/&quot;/gi, '"')
+        .replace(/&amp;/gi, "&")
+        .replace(/&lt;/gi, "<")
+        .replace(/&gt;/gi, ">");
+}
+
 async function bucketQuery(query, wikiConfig) {
     const params = new URLSearchParams({
         action: "bucket",
@@ -61,20 +72,24 @@ async function bucketQuery(query, wikiConfig) {
 
 async function findOutfit(name, game, wikiConfig) {
     if (game && game !== "Legacy" && game !== "Recode") return null;
-    const where = game
-        ? `{name = ${luaString(name)}, version = ${luaString(game)}}`
-        : `{name = ${luaString(name)}}`;
-    const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}).select("name", "page_name", "cost", "rarity", "description", "image", "creator", "version", "currency", "variants").where(${where}).limit(1).run()`, wikiConfig);
-    return Array.isArray(rows) ? rows[0] || null : rows;
+    const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}).select("name", "page_name", "cost", "rarity", "description", "image", "creator", "version", "currency", "variants").limit(500).run()`, wikiConfig);
+    if (!Array.isArray(rows)) return null;
+    const requestedName = decodeHtmlEntities(name).trim().toLowerCase();
+    return rows.find(row => {
+        const rowName = decodeHtmlEntities(valueOf(row, "name") || "").trim().toLowerCase();
+        const rowGame = valueOf(row, "version", "game");
+        return rowName === requestedName && (!game || rowGame === game);
+    }) || null;
 }
 
 async function getOutfitChoices(prefix, wikiConfig) {
     const rows = await bucketQuery(`mw.ext.bucket(${luaString(OUTFIT_BUCKET)}).select("name").limit(500).run()`, wikiConfig);
-    const search = String(prefix || "").trim().toLowerCase();
+    const search = decodeHtmlEntities(prefix || "").trim().toLowerCase();
     const names = new Map();
     for (const row of Array.isArray(rows) ? rows : []) {
         const name = valueOf(row, "name");
-        if (name && String(name).toLowerCase().includes(search)) names.set(String(name).toLowerCase(), String(name));
+        const decodedName = name ? decodeHtmlEntities(name) : "";
+        if (decodedName && decodedName.toLowerCase().includes(search)) names.set(decodedName.toLowerCase(), decodedName);
     }
     return [...names.values()].sort((a, b) => a.localeCompare(b)).slice(0, 25).map(name => ({ name, value: name }));
 }
@@ -131,14 +146,14 @@ function formatDescription(description) {
 }
 
 async function buildOutfitResponse(outfit, wikiConfig) {
-    const name = String(valueOf(outfit, "name", "title") || "");
+    const name = decodeHtmlEntities(valueOf(outfit, "name", "title") || "");
     const rarity = String(valueOf(outfit, "rarity") || "");
     const game = String(valueOf(outfit, "version", "game") || "");
     const rawCost = valueOf(outfit, "cost", "price");
     const cost = formatCost(rawCost);
     const creator = valueOf(outfit, "creator", "made_by", "madeBy");
     const description = formatDescription(valueOf(outfit, "description"));
-    const pageName = valueOf(outfit, "page_name", "page", "article", "wiki_page") || name;
+    const pageName = decodeHtmlEntities(valueOf(outfit, "page_name", "page", "article", "wiki_page") || name);
     const icon = valueOf(outfit, "image", "icon", "image_url", "imageUrl", "thumbnail");
 
     const pageData = await getPageData(pageName, wikiConfig);
