@@ -233,6 +233,3 @@ client.on("messageReactionAdd", async (reaction, user) => {
 client.on("interactionCreate", handleInteraction);
 
 client.login(DISCORD_TOKEN);
-
-
-

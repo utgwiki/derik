@@ -28,10 +28,12 @@ const COMMANDS = {
     parse: true,
     user: true,
     random: true,
+    cosmetic: true,
 };
 const SPEEDRUN_EMOJI = "DISCORD_EMOJI_ID";
 const CONTRIBSCORES_SCORE_EMOJI = "DISCORD_EMOJI_ID";
 const STATUS_INTERVAL_MS = 5 * 60 * 1000;
+const PAGE_CACHE_MS = 30 * 60 * 1000;
 
 // --- DISCORD STATUSES ---
 const STATUS_OPTIONS = [
@@ -47,5 +49,6 @@ module.exports = {
     SPEEDRUN_EMOJI,
     CONTRIBSCORES_SCORE_EMOJI,
     STATUS_INTERVAL_MS,
+    PAGE_CACHE_MS,
     STATUS_OPTIONS
 };

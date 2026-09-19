@@ -52,9 +52,14 @@ function formatTime(seconds, forceMinutes = false) {
     const s = Math.floor((totalMs % 60000) / 1000);
     const ms = totalMs % 1000;
 
-    const mm = String(m + h * 60).padStart(2, '0');
+    const mm = String(m).padStart(2, '0');
     const ss = String(s).padStart(2, '0');
     const mss = String(ms).padStart(3, '0');
+
+    if (h > 0) {
+        const hh = String(h).padStart(2, '0');
+        return `${hh}:${mm}:${ss}:${mss}`;
+    }
     return `${mm}:${ss}:${mss}`;
 }
 
@@ -135,7 +140,7 @@ async function handleSpeedrunRequest(interaction, gameKey, categoryId, levelId =
                 return p.name || "Guest";
             }).join(" @");
             const time = formatTime(run.times.primary_t, forceMinutes);
-            description += `${place}. <:flag:1477323785366540439> \`${time}\`    [**@${players}**](${run.weblink})\n`;
+            description += `${place}. \`${time}\`   [**@${players}**](${run.weblink})\n`;
         });
 
         const container = new ContainerBuilder();
@@ -154,10 +159,7 @@ async function handleSpeedrunRequest(interaction, gameKey, categoryId, levelId =
             .setLabel("View list")
             .setStyle(ButtonStyle.Link)
             .setURL(leaderboard.weblink);
-        if (SPEEDRUN_EMOJI || (wikiConfig && wikiConfig.emoji)) {
-            button.setEmoji(SPEEDRUN_EMOJI || wikiConfig.emoji);
-        }
-
+        if (SPEEDRUN_EMOJI) button.setEmoji(SPEEDRUN_EMOJI);
         row.addComponents(button);
 
         container.addActionRowComponents(row);
@@ -186,5 +188,3 @@ module.exports = {
     UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES,
     UFG_CATEGORIES
 };
-
-

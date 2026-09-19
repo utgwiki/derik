@@ -52,7 +52,8 @@ Most bot behavior is configured in [`config.js`](config.js). Restart the bot aft
 - **`WIKI_MAP`** — Map Discord channel or category IDs to a wiki. This controls which wiki is used when a message does not include a wiki prefix.
 - **`STATUS_OPTIONS`** — Customize the bot’s rotating Discord status messages and activity types.
 - **`STATUS_INTERVAL_MS`** — Set how often the bot rotates its status. The default is five minutes.
-- **`COMMANDS`** — Enable or disable individual slash commands. Set a command to `false` to prevent it from being registered with Discord. Available commands are `speedrun`, `contribs`, `wiki`, `parse`, `user`, and `random`.
+- **`PAGE_CACHE_MS`** — Set how long page lookups stay cached in memory. The default is 30 minutes.
+- **`COMMANDS`** — Enable or disable individual slash commands. Set a command to `false` to prevent it from being registered with Discord. Available commands are `speedrun`, `contribs`, `wiki`, `parse`, `user`, `random`, and `cosmetic`.
 - **`SPEEDRUN_EMOJI`** and **`CONTRIBSCORES_SCORE_EMOJI`** — Set the custom emoji IDs used by those features.
 
 When adding a wiki, add its configuration to `WIKIS` and update `WIKI_MAP` or the relevant status messages as needed. Discord channel, category, and emoji IDs can be copied using Discord’s Developer Mode.
