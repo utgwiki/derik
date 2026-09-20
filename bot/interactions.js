@@ -15,8 +15,7 @@ const {
     WIKIS,
     COMMANDS,
     BOT_NAME,
-    CONTRIBSCORES_SCORE_EMOJI,
-    toggleContribScore
+    CONTRIBSCORES_SCORE_EMOJI
 } = require("../config.js");
 const { fetch, truncateToParagraphs: truncateContentToParagraphs } = require("../functions/utils.js");
 

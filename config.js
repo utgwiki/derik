@@ -38,7 +38,6 @@ const COMMANDS = {
     cosmetic: true,
 };
 
-const toggleContribScore = true;
 const SPEEDRUN_EMOJI = "1488791940622454835";
 const CONTRIBSCORES_SCORE_EMOJI = "1488794096548974592";
 const STATUS_INTERVAL_MS = 5 * 60 * 1000;
@@ -78,7 +77,6 @@ module.exports = {
     WIKI_MAP,
     DEFAULT_WIKI,
     COMMANDS,
-    toggleContribScore,
     SPEEDRUN_EMOJI,
     CONTRIBSCORES_SCORE_EMOJI,
     STATUS_INTERVAL_MS,
