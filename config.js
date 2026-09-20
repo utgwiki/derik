@@ -50,7 +50,7 @@ const TRACKER = {
             "5581729181", // ufg
         ],
     },
-    frequency: 10000,
+    frequency: 500000,
     intervalMs: 3 * 60 * 1000,
 };
 
