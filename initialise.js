@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const { setRandomStatus } = require("./bot/presence.js");
 const { commands } = require("./bot/commands.js");
+const { startTracker } = require("./functions/tracker.js");
 const { 
     handleInteraction,
     handleUserRequest,
@@ -231,5 +232,7 @@ client.on("messageReactionAdd", async (reaction, user) => {
 });
 
 client.on("interactionCreate", handleInteraction);
+
+startTracker(client);
 
 client.login(DISCORD_TOKEN);

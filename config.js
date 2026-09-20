@@ -36,6 +36,22 @@ const COMMANDS = {
     user: true,
     random: true,
     cosmetic: true,
+    tracker: true,
+};
+
+// The tracker is enabled by COMMANDS.tracker. These values are kept here so
+// the tracker shares Derik's Discord client instead of running a second bot.
+const TRACKER = {
+    roleId: "1360880411114209340",
+    distribution: {
+        "1061009952199692410": [
+            "4864117649", // utg recode
+            "3202699936", // utg legacy
+            "5581729181", // ufg
+        ],
+    },
+    frequency: 10000,
+    intervalMs: 3 * 60 * 1000,
 };
 
 const SPEEDRUN_EMOJI = "1488791940622454835";
@@ -77,6 +93,7 @@ module.exports = {
     WIKI_MAP,
     DEFAULT_WIKI,
     COMMANDS,
+    TRACKER,
     SPEEDRUN_EMOJI,
     CONTRIBSCORES_SCORE_EMOJI,
     STATUS_INTERVAL_MS,

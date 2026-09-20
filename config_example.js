@@ -29,6 +29,19 @@ const COMMANDS = {
     user: true,
     random: true,
     cosmetic: true,
+    tracker: true,
+};
+
+// Set COMMANDS.tracker to false to disable all tracker checks and pings.
+const TRACKER = {
+    roleId: "DISCORD_ROLE_ID",
+    distribution: {
+        // Each channel ID maps to one or more Roblox universe IDs.
+        "DISCORD_CHANNEL_ID": ["ROBLOX_UNIVERSE_ID"],
+        // "DISCORD_CHANNEL_ID_2": ["ROBLOX_UNIVERSE_ID_2", "ROBLOX_UNIVERSE_ID_3"],
+    },
+    frequency: 10000,
+    intervalMs: 3 * 60 * 1000,
 };
 const SPEEDRUN_EMOJI = "DISCORD_EMOJI_ID";
 const CONTRIBSCORES_SCORE_EMOJI = "DISCORD_EMOJI_ID";
@@ -46,6 +59,7 @@ module.exports = {
     WIKI_MAP,
     DEFAULT_WIKI,
     COMMANDS,
+    TRACKER,
     SPEEDRUN_EMOJI,
     CONTRIBSCORES_SCORE_EMOJI,
     STATUS_INTERVAL_MS,

@@ -53,8 +53,11 @@ Most bot behavior is configured in [`config.js`](config.js). Restart the bot aft
 - **`STATUS_OPTIONS`** — Customize the bot’s rotating Discord status messages and activity types.
 - **`STATUS_INTERVAL_MS`** — Set how often the bot rotates its status. The default is five minutes.
 - **`PAGE_CACHE_MS`** — Set how long page lookups stay cached in memory. The default is 30 minutes.
-- **`COMMANDS`** — Enable or disable individual slash commands. Set a command to `false` to prevent it from being registered with Discord. Available commands are `speedrun`, `contribs`, `wiki`, `parse`, `user`, `random`, and `cosmetic`.
+- **`COMMANDS`** — Enable or disable individual slash commands. Set a command to `false` to prevent it from being registered with Discord. Available slash commands are `speedrun`, `contribs`, `wiki`, `parse`, `user`, `random`, and `cosmetic`; `tracker` controls the background Roblox tracker.
 - **`SPEEDRUN_EMOJI`** and **`CONTRIBSCORES_SCORE_EMOJI`** — Set the custom emoji IDs used by those features.
+- **`TRACKER`** — Configure the Roblox tracker. Set `roleId` to the role that should be pinged, `distribution` to map Discord channel IDs to one or more Roblox universe IDs (not place IDs), and `frequency` to the visit milestone interval. `intervalMs` controls how often Roblox is checked and defaults to three minutes.
+
+The tracker announces visit milestones, game updates, and newly added subplaces. It stores its last-seen values in [`tracker/visitchecker.json`](tracker/visitchecker.json). Set `COMMANDS.tracker` to `false` to disable all tracker checks and role pings; the tracker will not start at all in that mode.
 
 When adding a wiki, add its configuration to `WIKIS` and update `WIKI_MAP` or the relevant status messages as needed. Discord channel, category, and emoji IDs can be copied using Discord’s Developer Mode.
 
