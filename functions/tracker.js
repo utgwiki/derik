@@ -61,23 +61,10 @@ function getGames() {
         .filter(game => game.universeId && game.channelId);
 }
 
-async function fetchJson(url) {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+async function fetchJson(url, options) {
+    const response = await fetch(url, options);
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText} (${url})`);
     return response.json();
-}
-
-async function fetchPublishedVersions(placeId) {
-    const response = await fetchJson(
-        `https://develop.roblox.com/v1/places/${encodeURIComponent(placeId)}/versions?sortOrder=Desc&limit=100`
-    );
-    return (response.data || [])
-        .filter(version => Number.isFinite(Number(version.versionNumber)) && version.created)
-        .map(version => ({
-            versionNumber: Number(version.versionNumber),
-            created: version.created
-        }))
-        .sort((left, right) => left.versionNumber - right.versionNumber);
 }
 
 function formatMinutes(milliseconds) {
@@ -118,8 +105,8 @@ async function flushUpdateBatch(channel, record, now) {
     const lastUpdate = batch[batch.length - 1];
     const span = Math.max(0, new Date(lastUpdate.created).getTime() - new Date(firstUpdate.created).getTime());
     const message = batch.length > 1
-        ? `**${record.name}** updated ${batch.length} times within ${formatMinutes(span)} minutes! (Place Version: ${lastUpdate.versionNumber})`
-        : `**${record.name}** updated <t:${Math.floor(new Date(firstUpdate.created).getTime() / 1000)}:R>! (Place Version: ${firstUpdate.versionNumber})`;
+        ? `**${record.name}** updated ${batch.length} times within ${formatMinutes(span)} minutes!`
+        : `**${record.name}** updated <t:${Math.floor(new Date(firstUpdate.created).getTime() / 1000)}:R>!`;
 
     const previousUpdateAt = record.lastNotifiedUpdateAt ? new Date(record.lastNotifiedUpdateAt).getTime() : null;
     const longEnoughSinceUpdate = previousUpdateAt !== null &&
@@ -187,28 +174,24 @@ async function checkTracker(client, game) {
             record.placeIds = currentPlaceIds;
         }
 
-        const placeId = gameData.rootPlaceId;
-        if (placeId) {
-            const publishedVersions = await fetchPublishedVersions(placeId);
-            const latestVersion = publishedVersions[publishedVersions.length - 1];
-            if (latestVersion && typeof record.lastPublishedVersion === "undefined") {
-                record.lastPublishedVersion = latestVersion.versionNumber;
-                record.lastPublishedAt = latestVersion.created;
+        const latestUpdate = gameData.updated;
+        if (latestUpdate) {
+            if (typeof record.lastObservedUpdateTimestamp === "undefined") {
+                record.lastObservedUpdateTimestamp = latestUpdate;
                 record.lastNotifiedUpdateAt = firstLaunch
                     ? new Date(Date.now() - getUpdatePingAfterMs()).toISOString()
-                    : latestVersion.created;
+                    : latestUpdate;
                 record.pendingUpdates = [];
                 hasChanges = true;
-            } else if (latestVersion && latestVersion.versionNumber > Number(record.lastPublishedVersion || 0)) {
-                const newVersions = publishedVersions.filter(version => version.versionNumber > Number(record.lastPublishedVersion || 0));
+            } else if (new Date(latestUpdate).getTime() > new Date(record.lastObservedUpdateTimestamp).getTime()) {
                 record.pendingUpdates = [
                     ...(Array.isArray(record.pendingUpdates) ? record.pendingUpdates : []),
-                    ...newVersions
+                    { created: latestUpdate }
                 ].filter((version, index, versions) =>
-                    index === versions.findIndex(candidate => candidate.versionNumber === version.versionNumber)
+                    index === versions.findIndex(candidate => candidate.created === version.created)
                 );
-                record.lastPublishedVersion = latestVersion.versionNumber;
-                record.lastPublishedAt = latestVersion.created;
+                record.lastObservedUpdateTimestamp = latestUpdate;
+                record.lastUpdatedTimestamp = latestUpdate;
                 hasChanges = true;
             }
 
@@ -230,7 +213,7 @@ async function checkTracker(client, game) {
             saveState();
         }
 
-        console.log(`${record.name}: ${gameData.visits} visits, Places: ${currentPlaceIds.length}, Latest Published Version: ${record.lastPublishedVersion || "unknown"}`);
+        console.log(`${record.name}: ${gameData.visits} visits, Places: ${currentPlaceIds.length}, Roblox Updated: ${gameData.updated}`);
     } catch (error) {
         console.error(`Error checking Universe ID ${universeId}:`, error.message);
     } finally {
