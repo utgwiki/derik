@@ -4,6 +4,7 @@ const { COMMANDS, TRACKER } = require("../config.js");
 
 const statePath = path.join(__dirname, "..", "tracker", "visitchecker.json");
 let lastAnnouncedVisits = {};
+let firstLaunch = false;
 const activeChecks = new Set();
 const channelCache = new Map();
 
@@ -14,6 +15,7 @@ function loadState() {
     }
 
     lastAnnouncedVisits = JSON.parse(fs.readFileSync(statePath, "utf8"));
+    firstLaunch = Object.keys(lastAnnouncedVisits).length === 0;
 }
 
 function saveState() {
@@ -28,8 +30,7 @@ function isConfigured() {
         games.every(game =>
             game.channelId && !game.channelId.startsWith("DISCORD_") &&
             game.universeId && !game.universeId.startsWith("ROBLOX_")
-        ) &&
-        Number.isFinite(Number(TRACKER.frequency)) && Number(TRACKER.frequency) > 0;
+        );
 }
 
 function getGames() {
@@ -64,6 +65,70 @@ async function fetchJson(url) {
     const response = await fetch(url);
     if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
     return response.json();
+}
+
+async function fetchPublishedVersions(placeId) {
+    const response = await fetchJson(
+        `https://develop.roblox.com/v1/places/${encodeURIComponent(placeId)}/versions?sortOrder=Desc&limit=100`
+    );
+    return (response.data || [])
+        .filter(version => Number.isFinite(Number(version.versionNumber)) && version.created)
+        .map(version => ({
+            versionNumber: Number(version.versionNumber),
+            created: version.created
+        }))
+        .sort((left, right) => left.versionNumber - right.versionNumber);
+}
+
+function formatMinutes(milliseconds) {
+    return Math.max(1, Math.ceil(milliseconds / 60_000));
+}
+
+function getUpdateBatchWindowMs() {
+    const value = Number(TRACKER.updateBatchWindowMs);
+    return Number.isFinite(value) && value > 0 ? value : 5 * 60 * 1000;
+}
+
+function getUpdatePingAfterMs() {
+    const value = Number(TRACKER.updatePingAfterMs);
+    return Number.isFinite(value) && value > 0 ? value : 24 * 60 * 60 * 1000;
+}
+
+async function flushUpdateBatch(channel, record, now) {
+    const pending = Array.isArray(record.pendingUpdates) ? record.pendingUpdates : [];
+    if (pending.length === 0) return false;
+
+    const notificationsSuppressedUntil = new Date(record.notificationsSuppressedUntil || 0).getTime();
+    if (Number.isFinite(notificationsSuppressedUntil) && now < notificationsSuppressedUntil) return false;
+
+    const latestObservedAt = new Date(pending[pending.length - 1].created).getTime();
+    const batchWindow = getUpdateBatchWindowMs();
+    if (Number.isFinite(latestObservedAt) && now - latestObservedAt < batchWindow) return false;
+
+    const batch = [];
+    let batchStart = null;
+    for (const update of pending) {
+        const updateTime = new Date(update.created).getTime();
+        if (batchStart !== null && updateTime - batchStart > batchWindow) break;
+        if (batchStart === null) batchStart = updateTime;
+        batch.push(update);
+    }
+
+    const firstUpdate = batch[0];
+    const lastUpdate = batch[batch.length - 1];
+    const span = Math.max(0, new Date(lastUpdate.created).getTime() - new Date(firstUpdate.created).getTime());
+    const message = batch.length > 1
+        ? `**${record.name}** updated ${batch.length} times within ${formatMinutes(span)} minutes! (Place Version: ${lastUpdate.versionNumber})`
+        : `**${record.name}** updated <t:${Math.floor(new Date(firstUpdate.created).getTime() / 1000)}:R>! (Place Version: ${firstUpdate.versionNumber})`;
+
+    const previousUpdateAt = record.lastNotifiedUpdateAt ? new Date(record.lastNotifiedUpdateAt).getTime() : null;
+    const longEnoughSinceUpdate = previousUpdateAt !== null &&
+        new Date(firstUpdate.created).getTime() - previousUpdateAt >= getUpdatePingAfterMs();
+    await channel.send(`${batch.length === 1 && longEnoughSinceUpdate ? `<@&${TRACKER.roleId}> ` : ""}${message}`);
+
+    record.lastNotifiedUpdateAt = lastUpdate.created;
+    record.pendingUpdates = pending.slice(batch.length);
+    return true;
 }
 
 async function checkTracker(client, game) {
@@ -105,7 +170,11 @@ async function checkTracker(client, game) {
             record.lastVisit = 0;
             hasChanges = true;
         }
-
+        if (firstLaunch && typeof record.notificationsSuppressedUntil === "undefined") {
+            record.lastVisit = Math.floor(gameData.visits / Number(TRACKER.frequency || 10000)) * Number(TRACKER.frequency || 10000);
+            record.notificationsSuppressedUntil = new Date(Date.now() + getUpdatePingAfterMs()).toISOString();
+            hasChanges = true;
+        }
         if (newPlaceIds.length > 0) {
             record.placeIds = currentPlaceIds;
             hasChanges = true;
@@ -113,29 +182,47 @@ async function checkTracker(client, game) {
                 const name = currentPlaceMap[id] || `Unknown Place (${id})`;
                 return `- [${name}](<https://www.roblox.com/games/${id}>)`;
             }).join("\n");
-            await channel.send(`<@&${TRACKER.roleId}> **${record.name}** has ${newPlaceIds.length} new subplace${newPlaceIds.length > 1 ? "s" : ""}!\n${newPlacesList}`);
+            await channel.send(`**${record.name}** has ${newPlaceIds.length} new subplace${newPlaceIds.length > 1 ? "s" : ""}!\n${newPlacesList}`);
         } else {
             record.placeIds = currentPlaceIds;
         }
 
-        const previousUpdated = record.lastUpdatedTimestamp;
-        const isNewUpdate = previousUpdated && gameData.updated && new Date(gameData.updated) > new Date(previousUpdated);
-        if (isNewUpdate) {
-            record.lastUpdatedTimestamp = gameData.updated;
-            hasChanges = true;
-            const timestamp = Math.floor(new Date(gameData.updated).getTime() / 1000);
-            await channel.send(`<@&${TRACKER.roleId}> **${record.name}** updated <t:${timestamp}:R>!`);
-        } else if (typeof previousUpdated === "undefined") {
-            record.lastUpdatedTimestamp = gameData.updated;
-            hasChanges = true;
+        const placeId = gameData.rootPlaceId;
+        if (placeId) {
+            const publishedVersions = await fetchPublishedVersions(placeId);
+            const latestVersion = publishedVersions[publishedVersions.length - 1];
+            if (latestVersion && typeof record.lastPublishedVersion === "undefined") {
+                record.lastPublishedVersion = latestVersion.versionNumber;
+                record.lastPublishedAt = latestVersion.created;
+                record.lastNotifiedUpdateAt = firstLaunch
+                    ? new Date(Date.now() - getUpdatePingAfterMs()).toISOString()
+                    : latestVersion.created;
+                record.pendingUpdates = [];
+                hasChanges = true;
+            } else if (latestVersion && latestVersion.versionNumber > Number(record.lastPublishedVersion || 0)) {
+                const newVersions = publishedVersions.filter(version => version.versionNumber > Number(record.lastPublishedVersion || 0));
+                record.pendingUpdates = [
+                    ...(Array.isArray(record.pendingUpdates) ? record.pendingUpdates : []),
+                    ...newVersions
+                ].filter((version, index, versions) =>
+                    index === versions.findIndex(candidate => candidate.versionNumber === version.versionNumber)
+                );
+                record.lastPublishedVersion = latestVersion.versionNumber;
+                record.lastPublishedAt = latestVersion.created;
+                hasChanges = true;
+            }
+
+            if (await flushUpdateBatch(channel, record, Date.now())) hasChanges = true;
         }
 
         const frequency = Number(TRACKER.frequency);
-        const nextMilestone = Math.floor(gameData.visits / frequency) * frequency;
-        if (gameData.visits >= record.lastVisit + frequency) {
+        const notificationsSuppressedUntil = new Date(record.notificationsSuppressedUntil || 0).getTime();
+        const notificationsReady = !Number.isFinite(notificationsSuppressedUntil) || Date.now() >= notificationsSuppressedUntil;
+        if (notificationsReady && Number.isFinite(frequency) && frequency > 0 && gameData.visits >= record.lastVisit + frequency) {
+            const nextMilestone = Math.floor(gameData.visits / frequency) * frequency;
             record.lastVisit = nextMilestone;
             hasChanges = true;
-            await channel.send(`<@&${TRACKER.roleId}> **${record.name}** has reached **${nextMilestone.toLocaleString()}** visits!`);
+            await channel.send(`**${record.name}** has reached **${nextMilestone.toLocaleString()}** visits!`);
         }
 
         if (hasChanges) {
@@ -143,7 +230,7 @@ async function checkTracker(client, game) {
             saveState();
         }
 
-        console.log(`${record.name}: ${gameData.visits} visits, Places: ${currentPlaceIds.length}, Last Updated: ${gameData.updated}`);
+        console.log(`${record.name}: ${gameData.visits} visits, Places: ${currentPlaceIds.length}, Latest Published Version: ${record.lastPublishedVersion || "unknown"}`);
     } catch (error) {
         console.error(`Error checking Universe ID ${universeId}:`, error.message);
     } finally {

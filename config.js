@@ -51,6 +51,8 @@ const TRACKER = {
         ],
     },
     frequency: 10000,
+    updateBatchWindowMs: 5 * 60 * 1000,
+    updatePingAfterMs: 24 * 60 * 60 * 1000,
     intervalMs: 3 * 60 * 1000,
 };
 
