@@ -59,12 +59,7 @@ Most bot behavior is configured in [`config.js`](config.js). Restart the bot aft
 
 The tracker announces visit milestones, public game updates, and newly added subplaces. Visit milestone messages never ping a role. On its first launch with no tracker state, it silently records the current baselines and waits `updatePingAfterMs` before announcing new milestones or updates. Cookie-free update detection uses the public `games.roblox.com` `updated` field, which is universe metadata and may not represent an actual place publish. Detected bursts of updates are compiled without pinging the role, and last-seen values are stored in [`tracker/visitchecker.json`](tracker/visitchecker.json). Set `COMMANDS.tracker` to `false` to disable all tracker checks and role pings; the tracker will not start at all in that mode.
 
-Messages can also use interwiki links configured by the channel’s wiki, such as
-`[[wikipedia:Chicken]]` or `[[commons:Main page]]`. The bot reads the source wiki’s
-MediaWiki interwiki map, verifies that the destination page exists through its
-API, and then creates the usual extract embed with a link to the destination
-wiki. Prefixes configured in `config.js` take precedence over interwiki
-prefixes.
+Messages can also use interwiki links configured by the channel’s wiki, such as `[[wikipedia:Chicken]]` or `[[commons:Main page]]`. The bot reads the source wiki’s MediaWiki interwiki map, verifies that the destination page exists through its API, and then creates the usual extract embed with a link to the destination wiki. Prefixes configured in `config.js` take precedence over interwiki prefixes.
 
 When adding a wiki, add its configuration to `WIKIS` and update `WIKI_MAP` or the relevant status messages as needed. Discord channel, category, and emoji IDs can be copied using Discord’s Developer Mode.
 
