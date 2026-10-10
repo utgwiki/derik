@@ -1,19 +1,8 @@
 const { WIKIS, COMMANDS } = require("../config.js");
 const {
-    SB64_CATEGORIES,
-    SB64_CHARACTER_CHOICES,
-    SR_FILTER_CHOICES,
-    SR_VERSION_CHOICES,
-    SR_LEVELS,
-    SR_EVENTS_CHOICES,
-    SB64_CATEGORY_IDS,
-    SB64_LEVEL_IDS,
-    SB64_VARIABLES,
-    SB64_DEFAULTS,
-    SR_CATEGORY_IDS,
-    SR_VARIABLES,
-    SR_DEFAULTS,
-    ABJ_CATEGORIES
+    UTG_CATEGORIES,
+    UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES,
+    UFG_CATEGORIES
 } = require("../functions/speedrun.js");
 
 const wikiChoices = Object.entries(WIKIS).map(([key, wiki]) => ({
@@ -36,82 +25,13 @@ const allCommands = [
         integrationTypes: [0, 1],
         contexts: [0, 1, 2],
         options: [
-            {
-                name: 'sb64',
-                description: 'SUPER BLOX 64\'s speedrun leaderboard',
-                type: 1, // SUB_COMMAND
-                options: [
-                    {
-                        name: 'category',
-                        description: 'The category to view',
-                        type: 3, // STRING
-                        required: true,
-                        choices: SB64_CATEGORIES
-                    },
-                    {
-                        name: 'character',
-                        description: 'Filter by character',
-                        type: 3, // STRING
-                        required: false,
-                        choices: SB64_CHARACTER_CHOICES
-                    },
-                    {
-                        name: 'glitches',
-                        description: 'Filter by glitch category',
-                        type: 5, // BOOLEAN
-                        required: false
-                    }
-                ]
-            },
-            {
-                name: 'sr',
-                description: 'Superstar Racers\' speedrun leaderboard',
-                type: 1, // SUB_COMMAND
-                options: [
-                    {
-                        name: 'filter',
-                        description: 'The filter to apply',
-                        type: 3, // STRING
-                        required: true,
-                        choices: SR_FILTER_CHOICES
-                    },
-                    {
-                        name: 'version',
-                        description: 'The version to view',
-                        type: 3, // STRING
-                        required: true,
-                        choices: SR_VERSION_CHOICES
-                    },
-                    {
-                        name: 'level',
-                        description: 'The level to view (only works with Individual map filter)',
-                        type: 3, // STRING
-                        required: false,
-                        choices: SR_LEVELS
-                    },
-                    {
-                        name: 'events',
-                        description: 'Filter by events',
-                        type: 3, // STRING
-                        required: false,
-                        choices: SR_EVENTS_CHOICES
-                    }
-                ]
-            },
-            {
-                name: 'abj',
-                description: 'A Block\'s Journey\'s speedrun leaderboard',
-                type: 1, // SUB_COMMAND
-                options: [
-                    {
-                        name: 'category',
-                        description: 'The category to view',
-                        type: 3, // STRING
-                        required: true,
-                        choices: ABJ_CATEGORIES
-                    }
-                ]
-            }
+            { name: 'utg', description: "untitled tag game's speedrun leaderboard", type: 1, options: [
+                { name: 'category', description: 'The category to view', type: 3, required: true, choices: UTG_CATEGORIES },
+                { name: 'subcategory', description: 'The subcategory to view (if applicable)', type: 3, required: false, choices: UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES }
+            ] },
+            { name: 'ufg', description: "untitled farming game's speedrun leaderboard", type: 1, options: [
+                { name: 'category', description: 'The category to view', type: 3, required: true, choices: UFG_CATEGORIES }
+            ] }
         ]
     },
     {
@@ -178,6 +98,23 @@ const allCommands = [
         ]
     },
     {
+        name: 'cosmetic',
+        description: 'View game cosmetics',
+        integrationTypes: [0, 1],
+        contexts: [0, 1, 2],
+        options: [
+            {
+                name: 'outfit',
+                description: 'View an outfit',
+                type: 1,
+                options: [
+                    { name: 'name', description: 'The outfit to view', type: 3, required: true, autocomplete: true },
+                    { name: 'game', description: 'Filter by game', type: 3, required: false, choices: [{ name: 'Legacy', value: 'Legacy' }, { name: 'Recode', value: 'Recode' }] }
+                ]
+            }
+        ]
+    },
+    {
         name: 'user',
         description: 'View a wiki user profile',
         integrationTypes: [0, 1],
@@ -200,15 +137,4 @@ const allCommands = [
 
 const commands = allCommands.filter(command => COMMANDS[command.name] !== false);
 
-module.exports = {
-    commands,
-    SB64_CATEGORY_IDS,
-    SB64_LEVEL_IDS,
-    SB64_VARIABLES,
-    SB64_DEFAULTS,
-    SR_CATEGORY_IDS,
-    SR_FILTER_CHOICES,
-    SR_VERSION_CHOICES,
-    SR_VARIABLES,
-    SR_DEFAULTS
-};
+module.exports = { commands };

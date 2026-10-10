@@ -10,14 +10,8 @@ const { getRandomPage } = require("../functions/random.js");
 const { getUserProfile } = require("../functions/user.js");
 const { handleFileRequest } = require("../functions/file.js");
 const { handleContribScoresRequest } = require("../functions/contribs.js");
-const {
-    handleSpeedrunRequest,
-    SB64_VARIABLES,
-    SB64_DEFAULTS,
-    SR_CATEGORY_IDS,
-    SR_VARIABLES,
-    SR_DEFAULTS
-} = require("../functions/speedrun.js");
+const { handleSpeedrunRequest } = require("../functions/speedrun.js");
+const { findOutfit, getOutfitChoices, buildOutfitResponse } = require("../functions/cosmetic.js");
 const {
     WIKIS,
     COMMANDS,
@@ -493,6 +487,22 @@ async function handleInteraction(interaction) {
     }
 
     if (interaction.isAutocomplete()) {
+        if (interaction.commandName === 'cosmetic') {
+            const focusedOption = interaction.options.getFocused(true);
+            if (focusedOption.name !== 'name') return interaction.respond([]).catch(() => {});
+            let choices = [];
+            try {
+                choices = await getOutfitChoices(focusedOption.value, WIKIS["untitled-tag-game"]);
+            } catch (err) {
+                console.error('Failed to autocomplete cosmetic outfit:', err);
+            }
+            try {
+                return await interaction.respond(choices);
+            } catch (err) {
+                if (err?.code !== 10062) console.error('Failed to respond to cosmetic outfit autocomplete:', err);
+                return;
+            }
+        }
         if (interaction.commandName === 'parse' || interaction.commandName === 'wiki' || interaction.commandName === 'user') {
             const focusedOption = interaction.options.getFocused(true);
             const wikiKey = getInteractionWikiKey(interaction);
@@ -526,63 +536,37 @@ async function handleInteraction(interaction) {
         } catch (err) {
             return sendInteractionError(interaction, err, 'contribs');
         }
+    } else if (interaction.commandName === 'cosmetic') {
+        try {
+            const subCommand = interaction.options.getSubcommand();
+            if (subCommand !== 'outfit') return interaction.reply({ content: 'Unknown cosmetic type.', flags: MessageFlags.Ephemeral });
+            if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
+            const name = interaction.options.getString('name');
+            const game = interaction.options.getString('game');
+            const wikiConfig = WIKIS["untitled-tag-game"];
+            const outfit = await findOutfit(name, game, wikiConfig);
+            if (!outfit) return interaction.editReply({ content: `Outfit "${name}" not found.`, components: [] });
+            const container = await buildOutfitResponse(outfit, wikiConfig);
+            const response = await interaction.editReply({ content: "", components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } });
+            if (response && response.id) {
+                botToAuthorMap.set(response.id, interaction.user.id);
+                pruneMap(botToAuthorMap);
+            }
+        } catch (err) {
+            return sendInteractionError(interaction, err, 'cosmetic');
+        }
     } else if (interaction.commandName === 'speedrun') {
         try {
             const subCommand = interaction.options.getSubcommand();
             let response;
-            if (subCommand === 'sb64') {
+            if (subCommand === 'utg') {
                 const categoryId = interaction.options.getString('category');
-                const character = interaction.options.getString('character') || SB64_DEFAULTS.CHARACTER; // Default to Both
-                const glitches = interaction.options.getBoolean('glitches');
-
-                const variables = {};
-                variables[SB64_VARIABLES.CHARACTER] = character;
-                variables[SB64_VARIABLES.GLITCHES] = glitches ? SB64_DEFAULTS.GLITCHES_ON : SB64_DEFAULTS.GLITCHES_OFF; // true = Glitches, false/null = Glitchless
-
-                response = await handleSpeedrunRequest(interaction, 'sb64', categoryId, null, variables);
-            } else if (subCommand === 'sr') {
-                const filter = interaction.options.getString('filter');
-                const version = interaction.options.getString('version');
-                let levelId = interaction.options.getString('level');
-                const events = interaction.options.getString('events') || SR_DEFAULTS.EVENTS; // Default to No Events
-
-                const variables = {};
-                variables[SR_VARIABLES.EVENTS] = events;
-
-                let categoryId;
-                if (filter === 'individual_map') {
-                    if (!levelId) {
-                        return interaction.reply({ content: 'You must select a level when using the "Individual map" filter.', flags: MessageFlags.Ephemeral });
-                    }
-                    if (version === 'v13') {
-                        categoryId = SR_CATEGORY_IDS.INDIVIDUAL_LEVELS_V13;
-                    } else if (version === 'v12') {
-                        categoryId = SR_CATEGORY_IDS.INDIVIDUAL_LEVELS_V12;
-                    } else if (version === 'v10') {
-                        categoryId = SR_CATEGORY_IDS.INDIVIDUAL_LEVELS_V10;
-                    }
-                } else {
-                    // Full game or Full game with lobby
-                    categoryId = SR_CATEGORY_IDS.ALL_MAPS;
-                    levelId = null; // Ensure levelId is cleared for full-game categories
-
-                    if (filter === 'full_game_lobby') {
-                        variables[SR_VARIABLES.VERSIONS] = SR_DEFAULTS.VERSION_LOBBY;
-                    } else {
-                        if (version === 'v13') {
-                            variables[SR_VARIABLES.VERSIONS] = SR_DEFAULTS.VERSION_V13;
-                        } else if (version === 'v12') {
-                            variables[SR_VARIABLES.VERSIONS] = SR_DEFAULTS.VERSION_V12;
-                        } else if (version === 'v10') {
-                            variables[SR_VARIABLES.VERSIONS] = SR_DEFAULTS.VERSION_V11; // Map V10 to V11 for full game
-                        }
-                    }
-                }
-
-                response = await handleSpeedrunRequest(interaction, 'sr', categoryId, levelId, variables);
-            } else if (subCommand === 'abj') {
+                const subcategoryId = interaction.options.getString('subcategory');
+                const variables = (subcategoryId && categoryId === 'w2077y8k') ? { 'ql6mr2j8': subcategoryId } : {};
+                response = await handleSpeedrunRequest(interaction, 'utg', categoryId, null, variables);
+            } else if (subCommand === 'ufg') {
                 const categoryId = interaction.options.getString('category');
-                response = await handleSpeedrunRequest(interaction, 'abj', categoryId);
+                response = await handleSpeedrunRequest(interaction, 'ufg', categoryId);
             } else {
                 return interaction.reply({ content: 'Unknown subcommand.', flags: MessageFlags.Ephemeral }).catch(() => {});
             }
@@ -695,4 +679,3 @@ module.exports = {
     botToAuthorMap,
     pruneMap
 };
-

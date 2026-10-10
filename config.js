@@ -1,41 +1,31 @@
 // --- WIKI CONFIGURATION ---
-const BOT_NAME = "Wiki Guy"; 
+const BOT_NAME = "Derik";
 
 const WIKIS = {
-    "super-blox-64": {
-        name: "SUPER BLOX 64!",
-        baseUrl: "https://sb64.conecorp.cc",
-        apiEndpoint: "https://sb64.conecorp.cc/w/api.php",
-        articlePath: "https://sb64.conecorp.cc/",
-        prefix: "sb64",
-        emoji: "1472436401680158741"
+    "untitled-tag-game": {
+        name: "untitled tag game",
+        baseUrl: "https://tagging.wiki",
+        apiEndpoint: "https://tagging.wiki/w/api.php",
+        articlePath: "https://tagging.wiki/",
+        prefix: "utg",
+        emoji: "1488793151027155017"
     },
-    "superstar-racers": {
-        name: "Superstar Racers",
-        baseUrl: "https://sr.conecorp.cc",
-        apiEndpoint: "https://sr.conecorp.cc/w/api.php",
-        articlePath: "https://sr.conecorp.cc/",
-        prefix: "sr",
-        emoji: "1472436382998728714"
-    },
-    "a-blocks-journey": {
-        name: "A Block's Journey",
-        baseUrl: "https://abj.conecorp.cc",
-        apiEndpoint: "https://abj.conecorp.cc/w/api.php",
-        articlePath: "https://abj.conecorp.cc/",
-        prefix: "abj",
-        emoji: "1472436415760568460"
+    "untitled-farming-game": {
+        name: "untitled farming game",
+        baseUrl: "https://farm.miraheze.org",
+        apiEndpoint: "https://farm.miraheze.org/w/api.php",
+        articlePath: "https://farm.miraheze.org/",
+        prefix: "ufg",
+        emoji: "1538200099190997153"
     }
 };
 
 // Map a channel or category ID to a wiki.
 const WIKI_MAP = {
-    "1286781988669231166": "super-blox-64",
-    "1389381096436793484": "superstar-racers",
-    "1454904248943771748": "a-blocks-journey"
+    "1335895166292332585": "untitled-farming-game"
 };
 
-const DEFAULT_WIKI = "superstar-racers";
+const DEFAULT_WIKI = "untitled-tag-game";
 
 // Enable or disable slash commands. Disabled commands are not registered with Discord.
 const COMMANDS = {
@@ -45,32 +35,58 @@ const COMMANDS = {
     parse: true,
     user: true,
     random: true,
+    cosmetic: true,
+    tracker: true,
 };
 
-const SPEEDRUN_EMOJI = "1477323785366540439";
-const CONTRIBSCORES_SCORE_EMOJI = "1472433775593000961";
+// The tracker is enabled by COMMANDS.tracker. These values are kept here so
+// the tracker shares Derik's Discord client instead of running a second bot.
+const TRACKER = {
+    roleId: "1360880411114209340",
+    distribution: {
+        "1061009952199692410": [
+            "4864117649", // utg recode
+            "3202699936", // utg legacy
+            "5581729181", // ufg
+        ],
+    },
+    frequency: 500000,
+    updateBatchWindowMs: 5 * 60 * 1000,
+    updatePingAfterMs: 24 * 60 * 60 * 1000,
+    intervalMs: 3 * 60 * 1000,
+};
 
+const SPEEDRUN_EMOJI = "1488791940622454835";
+const CONTRIBSCORES_SCORE_EMOJI = "1488794096548974592";
 const STATUS_INTERVAL_MS = 5 * 60 * 1000;
 const PAGE_CACHE_MS = 30 * 60 * 1000;
 
 // --- DISCORD STATUSES ---
 const STATUS_OPTIONS = [
     { type: 4, text: "just send [[a page]] or {{a page}}!" },
-    { type: 4, text: "use [[sb64:page]] for SUPER BLOX 64! embedding" },
-    { type: 4, text: "use [[sr:Page]] for Superstar Racers embedding" },
-    { type: 4, text: "use [[abj:Page]] for A Block's Journey embedding" },
-    { type: 4, text: "abj.conecorp.cc" },
-    { type: 4, text: "sr.conecorp.cc" },
-    { type: 4, text: "sb64.conecorp.cc" },
-    { type: 0, text: "SUPER BLOX 64!" },
-    { type: 0, text: "Superstar Racers" },
-    { type: 0, text: "A Block's Journey" },
-    { type: 5, text: "SUPER BLOX 64!" },
-    { type: 5, text: "Superstar Racers" },
-    { type: 5, text: "A Block's Journey" },
-    { type: 3, text: "A Block's Journey teaser trailer" },
+    { type: 4, text: "now supporting 2 wikis!" },
+    { type: 4, text: "use [[utg:Page]] for untitled tag game embedding" },
+    { type: 4, text: "use [[ufg:Page]] for untitled farming game embedding" },
+    { type: 4, text: "farm.miraheze.org" },
+    { type: 4, text: "farm.miraheze.org" },
+    { type: 0, text: "untitled tag game" },
+    { type: 0, text: "untitled farming game" },
+    { type: 5, text: "untitled tag game" },
+    { type: 5, text: "untitled farming game" },
     { type: 4, text: "edit your message and my embed will too!" },
     { type: 4, text: "react with :wastebasket: on my messages & i'll delete!" },
+    { type: 4, text: 'Yeah heres a "Fun fact" for you. shut up.' },
+    { type: 4, text: "Hi" },
+    { type: 4, text: "ashkdjhafhakfh askkj fkfh jka hskfh ka hjkashf kashfjsf kahskjfhajks" },
+    { type: 4, text: "Theres an extra .02 to my height, let that sink in" },
+    { type: 4, text: "I have a contribution score of 0.01, beat that nerds" },
+    { type: 4, text: "Hes optimus lime, LOL" },
+    { type: 4, text: "Did you know: MARKIPLIER IS IN THIS GAME RIGHT NOW!" },
+    { type: 4, text: "Fact: not only did utg copy evade. They also copied gorilla tag" },
+    { type: 4, text: "Fact: utg copied evade entirely" },
+    { type: 4, text: "The pit is waiting for you" },
+    { type: 4, text: "Did you know: There are things called runners. GO FOR THEM!" },
+    { type: 4, text: "Yeah I have a #submission. a bomb role at your doorstep" },
 ];
 
 module.exports = {
@@ -79,6 +95,7 @@ module.exports = {
     WIKI_MAP,
     DEFAULT_WIKI,
     COMMANDS,
+    TRACKER,
     SPEEDRUN_EMOJI,
     CONTRIBSCORES_SCORE_EMOJI,
     STATUS_INTERVAL_MS,

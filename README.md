@@ -1,11 +1,11 @@
 <p align="center">
-  <img src="https://files.catbox.moe/bbp2yn.png" width="500" alt="banner">
+  <img src="https://files.catbox.moe/e37ipu.png" width="400" alt="banner">
 </p>
 
-<h3 align="center">the all-in-one bot for <a href="https://conecorp.cc">CONECORP</a> wikis</h3>
+<h3 align="center">the all-in-one wiki bot</h3>
 
 <p align="center">
-  <a href="https://discord.com/oauth2/authorize?client_id=1472272697798037524">Add to server</a>
+  <a href="https://discord.com/oauth2/authorize?client_id=1487822524808040669">Add to server</a>
 </p>
 
 ## Setup
@@ -20,8 +20,8 @@
 1. Clone the repository and enter its directory:
 
    ```bash
-   git clone https://github.com/conecorpwiki/wikiguy.git
-   cd wikiguy
+   git clone https://github.com/utgwiki/derik.git
+   cd derik
    ```
 
 2. Install the dependencies:
@@ -53,8 +53,11 @@ Most bot behavior is configured in [`config.js`](config.js). Restart the bot aft
 - **`STATUS_OPTIONS`** — Customize the bot’s rotating Discord status messages and activity types.
 - **`STATUS_INTERVAL_MS`** — Set how often the bot rotates its status. The default is five minutes.
 - **`PAGE_CACHE_MS`** — Set how long page lookups stay cached in memory. The default is 30 minutes.
-- **`COMMANDS`** — Enable or disable individual slash commands. Set a command to `false` to prevent it from being registered with Discord. Available commands are `speedrun`, `contribs`, `wiki`, `parse`, `user`, and `random`.
+- **`COMMANDS`** — Enable or disable individual slash commands. Set a command to `false` to prevent it from being registered with Discord. Available slash commands are `speedrun`, `contribs`, `wiki`, `parse`, `user`, `random`, and `cosmetic`; `tracker` controls the background Roblox tracker.
 - **`SPEEDRUN_EMOJI`** and **`CONTRIBSCORES_SCORE_EMOJI`** — Set the custom emoji IDs used by those features.
+- **`TRACKER`** — Configure the Roblox tracker. Set `roleId` to the role that should be pinged, `distribution` to map Discord channel IDs to one or more Roblox universe IDs (not place IDs), and `frequency` to the visit milestone interval. `updatePingAfterMs` controls the quiet period before a single update can ping the role, while `updateBatchWindowMs` controls how updates within five minutes are compiled. `intervalMs` controls how often Roblox is checked and defaults to three minutes.
+
+The tracker announces visit milestones, public game updates, and newly added subplaces. Visit milestone messages never ping a role. On its first launch with no tracker state, it silently records the current baselines and waits `updatePingAfterMs` before announcing new milestones or updates. Cookie-free update detection uses the public `games.roblox.com` `updated` field, which is universe metadata and may not represent an actual place publish. Detected bursts of updates are compiled without pinging the role, and last-seen values are stored in [`tracker/visitchecker.json`](tracker/visitchecker.json). Set `COMMANDS.tracker` to `false` to disable all tracker checks and role pings; the tracker will not start at all in that mode.
 
 Messages can also use interwiki links configured by the channel’s wiki, such as `[[wikipedia:Chicken]]` or `[[commons:Main page]]`. The bot reads the source wiki’s MediaWiki interwiki map, verifies that the destination page exists through its API, and then creates the usual extract embed with a link to the destination wiki. Prefixes configured in `config.js` take precedence over interwiki prefixes.
 
