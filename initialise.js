@@ -9,6 +9,7 @@ const {
     botToAuthorMap,
     pruneMap
 } = require("./bot/interactions.js");
+const { findSyntaxMatch } = require("./bot/messageParser.js");
 
 const {
     Client,
@@ -19,9 +20,9 @@ const {
 const {
     WIKIS,
     WIKI_MAP,
-    DEFAULT_WIKI,
     STATUS_INTERVAL_MS
 } = require("./config.js");
+const { setDiscordBotName } = require("./bot/name.js");
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
@@ -31,17 +32,6 @@ const PREFIX_WIKI_MAP = Object.keys(WIKIS).reduce((acc, key) => {
     if (prefix) acc[prefix] = key;
     return acc;
 }, {});
-
-// Interwiki prefixes are not limited to the wikis configured in config.js.
-// Configured prefixes are still resolved first below; this pattern only makes
-// other prefixes reach the MediaWiki interwiki resolver.
-const prefixPattern = '[A-Za-z][A-Za-z0-9_-]*';
-
-const syntaxRegex = new RegExp(
-    `\\{\\{(?:(${prefixPattern}):)?([^{}|]+)(?:\\|[^{}]*)?\\}\\}|` +
-    `\\[\\[(?:(${prefixPattern}):)?([^\\]|]+)(?:\\|[^[\\]]*)?\\]\\]`,
-    "i"
-);
 
 // -------------------- CLIENT SETUP --------------------
 const client = new Client({
@@ -58,6 +48,7 @@ const client = new Client({
 
 client.once("ready", async () => {
     console.log(`Logged in as ${client.user.tag}`);
+    setDiscordBotName(client.user.username);
     setRandomStatus(client);
     setInterval(() => { setRandomStatus(client); }, STATUS_INTERVAL_MS);
 
@@ -78,7 +69,7 @@ function isUnknownMessageError(error) {
 function getWikiAndPage(messageContent, channel) {
     if (typeof messageContent !== "string") return null;
 
-    const match = messageContent.match(syntaxRegex);
+    const match = findSyntaxMatch(messageContent);
     if (!match) return null;
 
     const prefix = match[1] || match[3];
@@ -99,7 +90,9 @@ function getWikiAndPage(messageContent, channel) {
     // no WIKI_MAP export yet. The default wiki still handles the message.
     const wikiMap = WIKI_MAP || {};
     const configuredId = channelAndCategoryIds.find(id => wikiMap[id]);
-    const defaultWikiKey = wikiMap[configuredId] || DEFAULT_WIKI;
+    const defaultWikiKey = wikiMap[configuredId]
+        || Object.keys(WIKIS).find(key => WIKIS[key].default)
+        || Object.keys(WIKIS)[0];
     const defaultWikiConfig = WIKIS[defaultWikiKey];
 
     let wikiConfig = null;
