@@ -25,6 +25,10 @@ const COMMANDS = {
     user: true,
     random: true,
 };
+
+// Enable or disable inline wiki syntax such as [[Page]] and {{Template}}.
+const INLINE_TEXT = true;
+
 const EMOJIS = {
     speedrun: "",
     contribs: ""
@@ -43,6 +47,7 @@ module.exports = {
     WIKIS,
     WIKI_MAP: typeof WIKI_MAP !== "undefined" ? WIKI_MAP : undefined,
     COMMANDS,
+    INLINE_TEXT,
     EMOJIS,
     WEB_SERVER,
     STATUS_INTERVAL_MS,

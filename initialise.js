@@ -20,6 +20,7 @@ const {
 const {
     WIKIS,
     WIKI_MAP,
+    INLINE_TEXT,
     STATUS_INTERVAL_MS
 } = require("./config.js");
 const { setDiscordBotName } = require("./bot/name.js");
@@ -124,6 +125,7 @@ function getWikiAndPage(messageContent, channel) {
 client.on("messageCreate", async (message) => {
     try {
         if (message.author?.bot) return;
+        if (INLINE_TEXT === false) return;
 
         const res = getWikiAndPage(message.content, message.channel);
         if (!res) return;
@@ -168,6 +170,7 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
     if (newMessage.author?.bot) return;
     if (oldMessage.content === newMessage.content) return;
     if (!responseMap.has(newMessage.id)) return;
+    if (INLINE_TEXT === false) return;
 
     const res = getWikiAndPage(newMessage.content, newMessage.channel);
     if (!res) return;

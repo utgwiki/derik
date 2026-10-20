@@ -46,6 +46,8 @@ const COMMANDS = {
     random: true,
 };
 
+const INLINE_TEXT = true;
+
 const EMOJIS = {
     speedrun: "1477323785366540439",
     contribs: "1472433775593000961"
@@ -81,6 +83,7 @@ module.exports = {
     WIKIS,
     WIKI_MAP: typeof WIKI_MAP !== "undefined" ? WIKI_MAP : undefined,
     COMMANDS,
+    INLINE_TEXT,
     EMOJIS,
     WEB_SERVER,
     STATUS_INTERVAL_MS,
