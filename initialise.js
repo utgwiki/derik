@@ -5,11 +5,12 @@ const { commands } = require("./bot/commands.js");
 const { 
     handleInteraction,
     handleUserRequest,
+    handleMultiplePageRequests,
     responseMap,
     botToAuthorMap,
     pruneMap
 } = require("./bot/interactions.js");
-const { findSyntaxMatch } = require("./bot/messageParser.js");
+const { findSyntaxMatches } = require("./bot/messageParser.js");
 
 const {
     Client,
@@ -67,12 +68,7 @@ function isUnknownMessageError(error) {
     return error?.code === 10008 || error?.rawError?.code === 10008;
 }
 
-function getWikiAndPage(messageContent, channel) {
-    if (typeof messageContent !== "string") return null;
-
-    const match = findSyntaxMatch(messageContent);
-    if (!match) return null;
-
+function getWikiAndPageFromMatch(match, channel) {
     const prefix = match[1] || match[3];
     const matchedPageName = (match[2] || match[4]).trim();
     let rawPageName = matchedPageName;
@@ -119,7 +115,14 @@ function getWikiAndPage(messageContent, channel) {
         rawPageName = "Template:" + rawPageName.slice(2).trim();
     }
 
-    return { wikiConfig, rawPageName };
+    return { wikiConfig, rawPageName, label: matchedPageName };
+}
+
+function getWikiAndPages(messageContent, channel) {
+    if (typeof messageContent !== "string") return [];
+    return findSyntaxMatches(messageContent)
+        .map(match => getWikiAndPageFromMatch(match, channel))
+        .filter(Boolean);
 }
 
 client.on("messageCreate", async (message) => {
@@ -127,7 +130,19 @@ client.on("messageCreate", async (message) => {
         if (message.author?.bot) return;
         if (INLINE_TEXT === false) return;
 
-        const res = getWikiAndPage(message.content, message.channel);
+        const pageRequests = getWikiAndPages(message.content, message.channel);
+        if (pageRequests.length > 1) {
+            const response = await handleMultiplePageRequests(pageRequests, message);
+            if (response && response.id) {
+                responseMap.set(message.id, response.id);
+                botToAuthorMap.set(response.id, message.author.id);
+                pruneMap(responseMap);
+                pruneMap(botToAuthorMap);
+            }
+            return;
+        }
+
+        const res = pageRequests[0] || null;
         if (!res) return;
 
         const { wikiConfig, rawPageName } = res;
@@ -172,7 +187,8 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
     if (!responseMap.has(newMessage.id)) return;
     if (INLINE_TEXT === false) return;
 
-    const res = getWikiAndPage(newMessage.content, newMessage.channel);
+    const pageRequests = getWikiAndPages(newMessage.content, newMessage.channel);
+    const res = pageRequests[0] || null;
     if (!res) return;
 
     const { wikiConfig, rawPageName } = res;
@@ -181,7 +197,9 @@ client.on("messageUpdate", async (oldMessage, newMessage) => {
     try {
         const botMessage = await newMessage.channel.messages.fetch(botMessageId);
         if (botMessage) {
-            const response = await handleUserRequest(wikiConfig, rawPageName, newMessage, botMessage);
+            const response = pageRequests.length > 1
+                ? await handleMultiplePageRequests(pageRequests, newMessage, botMessage)
+                : await handleUserRequest(wikiConfig, rawPageName, newMessage, botMessage);
             if (response && response.id) {
                 botToAuthorMap.set(response.id, newMessage.author.id);
                 pruneMap(botToAuthorMap);
