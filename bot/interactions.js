@@ -6,7 +6,7 @@ const {
     linkIntroductionPageName,
     resolveInterwikiPage,
 } = require("../functions/page.js");
-const { getRandomPage } = require("../functions/random.js");
+const { getRandomPage, getRandomRootPage } = require("../functions/random.js");
 const { getUserProfile } = require("../functions/user.js");
 const { handleFileRequest } = require("../functions/file.js");
 const { handleContribScoresRequest } = require("../functions/contribs.js");
@@ -439,10 +439,14 @@ async function handleUserRequest(wikiConfig, rawPageName, messageOrInteraction, 
             return await smartReply({ content: "", components: [container], flags: MessageFlags.IsComponentsV2, allowedMentions: { parse: [] } });
         }
 
-        if (String(rawPageName).trim().toLowerCase() === "special:random") {
-            const randomTitle = await getRandomPage(wikiConfig);
+        const requestedPageName = String(rawPageName).trim().toLowerCase();
+        if (requestedPageName === "special:random" || requestedPageName === "special:randomrootpage") {
+            const randomTitle = requestedPageName === "special:randomrootpage"
+                ? await getRandomRootPage(wikiConfig)
+                : await getRandomPage(wikiConfig);
             if (!randomTitle) {
-                return await smartReply({ content: `Unable to find a random page on [${getWikiDisplayName(wikiConfig)}](<${wikiConfig.baseUrl}>).`, components: [], flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
+                const pageType = requestedPageName === "special:randomrootpage" ? "random root page" : "random page";
+                return await smartReply({ content: `Unable to find a ${pageType} on [${getWikiDisplayName(wikiConfig)}](<${wikiConfig.baseUrl}>).`, components: [], flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] } });
             }
             rawPageName = randomTitle;
         }
@@ -501,7 +505,12 @@ async function handleUserRequest(wikiConfig, rawPageName, messageOrInteraction, 
                 allowedMentions: { repliedUser: false },
             });
         } else {
-            return await smartReply({ content: `Page "${rawPageName}" not found on [${getWikiDisplayName(wikiConfig)}](<${wikiConfig.baseUrl}>).`, components: [], flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] }});
+            const response = await smartReply({ content: `Page "${rawPageName}" not found on [${getWikiDisplayName(wikiConfig)}](<${wikiConfig.baseUrl}>).`, components: [], flags: MessageFlags.Ephemeral, allowedMentions: { parse: [] }});
+            if (!isInteraction(messageOrInteraction) && response?.delete) {
+                const deleteTimeout = setTimeout(() => response.delete().catch(() => {}), 5000);
+                deleteTimeout.unref?.();
+            }
+            return response;
         }
 
     } catch (err) {
