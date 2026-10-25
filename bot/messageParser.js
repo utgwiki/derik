@@ -32,16 +32,20 @@ function getCodeRanges(content) {
 }
 
 function findSyntaxMatch(content) {
-    const codeRanges = getCodeRanges(content);
-    const matcher = new RegExp(syntaxRegex.source, `${syntaxRegex.flags}g`);
-    let match;
-
-    while ((match = matcher.exec(content)) !== null) {
-        const isInCode = codeRanges.some(([start, end]) => match.index >= start && match.index < end);
-        if (!isInCode) return match;
-    }
-
-    return null;
+    return findSyntaxMatches(content)[0] || null;
 }
 
-module.exports = { findSyntaxMatch };
+function findSyntaxMatches(content) {
+    const codeRanges = getCodeRanges(content);
+    const matcher = new RegExp(syntaxRegex.source, `${syntaxRegex.flags}g`);
+    const matches = [];
+
+    for (let match; (match = matcher.exec(content)) !== null;) {
+        const isInCode = codeRanges.some(([start, end]) => match.index >= start && match.index < end);
+        if (!isInCode) matches.push(match);
+    }
+
+    return matches;
+}
+
+module.exports = { findSyntaxMatch, findSyntaxMatches };

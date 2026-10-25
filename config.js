@@ -55,6 +55,9 @@ const TRACKER = {
     intervalMs: 3 * 60 * 1000,
 };
 
+
+const INLINE_TEXT = true;
+
 const EMOJIS = {
     speedrun: "1488791940622454835",
     contribs: "1488794096548974592"
@@ -98,6 +101,7 @@ module.exports = {
     WIKIS,
     WIKI_MAP: typeof WIKI_MAP !== "undefined" ? WIKI_MAP : undefined,
     COMMANDS,
+    INLINE_TEXT,
     EMOJIS,
     WEB_SERVER,
     STATUS_INTERVAL_MS,

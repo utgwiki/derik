@@ -54,6 +54,7 @@ Most bot behavior is configured in [`config.js`](config.js). Restart the bot aft
 | `WIKIS` | Defines the supported wikis. Each entry contains the wiki name, MediaWiki API endpoint, article URL, message prefix, optional emoji, and optionally `default: true`. |
 | `WIKI_MAP` | Optional map of Discord channel or category IDs to wiki keys. Without a channel/category match, the wiki marked `default: true` is used. If none is marked, the first wiki is used. |
 | `COMMANDS` | Enables or disables slash commands. Set a command to `false` to prevent registration. Available commands are `speedrun`, `contribs`, `wiki`, `parse`, `user`, and `random`. |
+| `INLINE_TEXT` | Enables parsing inline wiki syntax such as `[[Page]]` and `{{Template}}`. Set it to `false` to disable those message triggers while keeping slash commands available. |
 | `EMOJIS` | Optional feature emojis: `speedrun` is used on speedrun buttons and `contribs` is used in contribution score leaderboards. Leave either value empty or unset to omit that emoji. |
 | `WEB_SERVER` | Starts the small status web server when `true`. Set it to `false` to disable the server; `PORT` is then not required. |
 | `STATUS_OPTIONS` | Customizes the bot’s rotating Discord status messages and activity types. |

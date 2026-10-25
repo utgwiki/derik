@@ -120,6 +120,18 @@ function htmlToMarkdown(html, baseUrl, $existing = null) {
     }
 
     // Remove unwanted elements
+    $('.toc, #toc, .mw-table-of-contents').remove();
+    $('.tabber').each((_, tabber) => {
+        const $tabber = $(tabber);
+        const title = cleanSectionName($tabber.find('.tabber__header--title').first().text());
+        if (title) $tabber.prepend(`<h2>${title}</h2>`);
+    });
+    $('.tabbernav, .tabber__header, .tabber__tabs, .tabber__indicator').remove();
+    $('.tabbertab[title]').each((_, tab) => {
+        const $tab = $(tab);
+        const title = cleanSectionName($tab.attr('title'));
+        if (title) $tab.prepend(`<h2>${title}</h2>`);
+    });
     $('style, script, .thumb, figure, table, .mw-editsection, sup.reference, .noprint, .nomobile, .error, input, .ext-floatingui-content, .infobox, .portable-infobox, table[class*="infobox"], ol.references, .mw-collapsed, .template-navplate').remove();
 
     function convertNode(node) {
