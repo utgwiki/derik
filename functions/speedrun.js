@@ -254,7 +254,10 @@ async function handleSpeedrunRequest(interaction, gameKey, categoryId, levelId =
     }
 
     try {
-        if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
+        if (!interaction.deferred && !interaction.replied) {
+            const ephemeral = interaction.options.getBoolean('ephemeral');
+            await interaction.deferReply(ephemeral ? { flags: MessageFlags.Ephemeral } : {});
+        }
         const responseJson = await getLeaderboardData(game.id, categoryId, levelId, variables);
         const leaderboard = responseJson.data;
 

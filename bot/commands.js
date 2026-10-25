@@ -28,6 +28,12 @@ const wikiOption = (required = true) => ({
     required,
     choices: wikiChoices
 });
+const ephemeralOption = {
+    name: 'ephemeral',
+    description: 'Only show the response to you',
+    type: 5,
+    required: false
+};
 
 const allCommands = [
     {
@@ -60,7 +66,8 @@ const allCommands = [
                         description: 'Filter by glitch category',
                         type: 5, // BOOLEAN
                         required: false
-                    }
+                    },
+                    ephemeralOption
                 ]
             },
             {
@@ -95,7 +102,8 @@ const allCommands = [
                         type: 3, // STRING
                         required: false,
                         choices: SR_EVENTS_CHOICES
-                    }
+                    },
+                    ephemeralOption
                 ]
             },
             {
@@ -109,7 +117,8 @@ const allCommands = [
                         type: 3, // STRING
                         required: true,
                         choices: ABJ_CATEGORIES
-                    }
+                    },
+                    ephemeralOption
                 ]
             }
         ]
@@ -120,7 +129,8 @@ const allCommands = [
         integrationTypes: [0, 1],
         contexts: [0, 1, 2],
         options: [
-            ...(hasMultipleWikis ? [wikiOption(true)] : [])
+            ...(hasMultipleWikis ? [wikiOption(true)] : []),
+            ephemeralOption
         ]
     },
     {
@@ -129,7 +139,8 @@ const allCommands = [
         integrationTypes: [0, 1],
         contexts: [0, 1, 2],
         options: [
-            ...(hasMultipleWikis ? [wikiOption(true)] : [])
+            ...(hasMultipleWikis ? [wikiOption(true)] : []),
+            ephemeralOption
         ]
     },
     {
@@ -157,7 +168,8 @@ const allCommands = [
                         type: 3, // STRING
                         required: false,
                         autocomplete: true
-                    }
+                    },
+                    ephemeralOption
                 ]
             },
             {
@@ -172,7 +184,8 @@ const allCommands = [
                         type: 3, // STRING
                         required: true,
                         autocomplete: true
-                    }
+                    },
+                    ephemeralOption
                 ]
             }
         ]
@@ -184,7 +197,8 @@ const allCommands = [
         contexts: [0, 1, 2],
         options: [
             ...(hasMultipleWikis ? [wikiOption(true)] : []),
-            { name: 'username', description: 'The wiki username', type: 3, required: true, autocomplete: true }
+            { name: 'username', description: 'The wiki username', type: 3, required: true, autocomplete: true },
+            ephemeralOption
         ]
     },
     {
@@ -193,7 +207,14 @@ const allCommands = [
         integrationTypes: [0, 1],
         contexts: [0, 1, 2],
         options: [
-            ...(hasMultipleWikis ? [wikiOption(false)] : [])
+            ...(hasMultipleWikis ? [wikiOption(false)] : []),
+            {
+                name: 'rootpage',
+                description: 'Only choose pages without subpages',
+                type: 5,
+                required: false
+            },
+            ephemeralOption
         ]
     }
 ];
