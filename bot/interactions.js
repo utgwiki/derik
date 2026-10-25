@@ -42,6 +42,10 @@ function getInteractionWikiKey(interaction, allowRandom = false) {
     return interaction.options.getString('wiki') || SINGLE_WIKI_KEY || (allowRandom ? nextRandomWikiKey() : null);
 }
 
+function getEphemeralReplyOptions(interaction) {
+    return interaction.options.getBoolean('ephemeral') ? { flags: MessageFlags.Ephemeral } : {};
+}
+
 function getWikiDisplayName(wikiConfig) {
     return String(wikiConfig.name || '').replace(/\s+Wiki$/i, '');
 }
@@ -645,7 +649,7 @@ async function handleInteraction(interaction) {
         }
 
         try {
-            if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
+            if (!interaction.deferred && !interaction.replied) await interaction.deferReply(getEphemeralReplyOptions(interaction));
 
             // Just the wiki link, per user request
             const response = await interaction.editReply({
@@ -675,10 +679,10 @@ async function handleInteraction(interaction) {
             return;
         }
         try {
-            if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
+            if (!interaction.deferred && !interaction.replied) await interaction.deferReply(getEphemeralReplyOptions(interaction));
             const pageName = interaction.commandName === 'user'
                 ? `User:${interaction.options.getString('username')}`
-                : 'Special:Random';
+                : interaction.options.getBoolean('rootpage') ? 'Special:RandomRootPage' : 'Special:Random';
             const response = await handleUserRequest(wikiConfig, pageName, interaction, null, interaction.commandName === 'random' ? '🎲' : null);
             if (response && response.id) {
                 botToAuthorMap.set(response.id, interaction.user.id);
@@ -698,7 +702,7 @@ async function handleInteraction(interaction) {
         }
 
         try {
-            if (!interaction.deferred && !interaction.replied) await interaction.deferReply();
+            if (!interaction.deferred && !interaction.replied) await interaction.deferReply(getEphemeralReplyOptions(interaction));
 
             let response;
             if (subCommand === 'page') {

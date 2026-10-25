@@ -17,6 +17,12 @@ const wikiOption = (required = true) => ({
     required,
     choices: wikiChoices
 });
+const ephemeralOption = {
+    name: 'ephemeral',
+    description: 'Only show the response to you',
+    type: 5,
+    required: false
+};
 
 const allCommands = [
     {
@@ -27,10 +33,12 @@ const allCommands = [
         options: [
             { name: 'utg', description: "untitled tag game's speedrun leaderboard", type: 1, options: [
                 { name: 'category', description: 'The category to view', type: 3, required: true, choices: UTG_CATEGORIES },
-                { name: 'subcategory', description: 'The subcategory to view (if applicable)', type: 3, required: false, choices: UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES }
+                { name: 'subcategory', description: 'The subcategory to view (if applicable)', type: 3, required: false, choices: UTG_FIRST_TO_THE_TOKEN_SUBCATEGORIES },
+                ephemeralOption
             ] },
             { name: 'ufg', description: "untitled farming game's speedrun leaderboard", type: 1, options: [
-                { name: 'category', description: 'The category to view', type: 3, required: true, choices: UFG_CATEGORIES }
+                { name: 'category', description: 'The category to view', type: 3, required: true, choices: UFG_CATEGORIES },
+                ephemeralOption
             ] }
         ]
     },
@@ -40,7 +48,8 @@ const allCommands = [
         integrationTypes: [0, 1],
         contexts: [0, 1, 2],
         options: [
-            ...(hasMultipleWikis ? [wikiOption(true)] : [])
+            ...(hasMultipleWikis ? [wikiOption(true)] : []),
+            ephemeralOption
         ]
     },
     {
@@ -49,7 +58,8 @@ const allCommands = [
         integrationTypes: [0, 1],
         contexts: [0, 1, 2],
         options: [
-            ...(hasMultipleWikis ? [wikiOption(true)] : [])
+            ...(hasMultipleWikis ? [wikiOption(true)] : []),
+            ephemeralOption
         ]
     },
     {
@@ -77,7 +87,8 @@ const allCommands = [
                         type: 3, // STRING
                         required: false,
                         autocomplete: true
-                    }
+                    },
+                    ephemeralOption
                 ]
             },
             {
@@ -92,7 +103,8 @@ const allCommands = [
                         type: 3, // STRING
                         required: true,
                         autocomplete: true
-                    }
+                    },
+                    ephemeralOption
                 ]
             }
         ]
@@ -111,7 +123,26 @@ const allCommands = [
                     { name: 'name', description: 'The outfit to view', type: 3, required: true, autocomplete: true },
                     { name: 'game', description: 'Filter by game', type: 3, required: false, choices: [{ name: 'Legacy', value: 'Legacy' }, { name: 'Recode', value: 'Recode' }] }
                 ]
-            }
+            },
+            ephemeralOption
+        ]
+    },
+    {
+        name: 'cosmetic',
+        description: 'View game cosmetics',
+        integrationTypes: [0, 1],
+        contexts: [0, 1, 2],
+        options: [
+            {
+                name: 'outfit',
+                description: 'View an outfit',
+                type: 1,
+                options: [
+                    { name: 'name', description: 'The outfit to view', type: 3, required: true, autocomplete: true },
+                    { name: 'game', description: 'Filter by game', type: 3, required: false, choices: [{ name: 'Legacy', value: 'Legacy' }, { name: 'Recode', value: 'Recode' }] }
+                ]
+            },
+            ephemeralOption
         ]
     },
     {
@@ -121,7 +152,8 @@ const allCommands = [
         contexts: [0, 1, 2],
         options: [
             ...(hasMultipleWikis ? [wikiOption(true)] : []),
-            { name: 'username', description: 'The wiki username', type: 3, required: true, autocomplete: true }
+            { name: 'username', description: 'The wiki username', type: 3, required: true, autocomplete: true },
+            ephemeralOption
         ]
     },
     {
@@ -130,7 +162,14 @@ const allCommands = [
         integrationTypes: [0, 1],
         contexts: [0, 1, 2],
         options: [
-            ...(hasMultipleWikis ? [wikiOption(false)] : [])
+            ...(hasMultipleWikis ? [wikiOption(false)] : []),
+            {
+                name: 'rootpage',
+                description: 'Only choose pages without subpages',
+                type: 5,
+                required: false
+            },
+            ephemeralOption
         ]
     }
 ];

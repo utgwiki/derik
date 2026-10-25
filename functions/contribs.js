@@ -85,7 +85,8 @@ async function handleContribScoresRequest(interaction, { toggleContribScore, WIK
     }
 
     try {
-        await interaction.deferReply();
+        const ephemeral = interaction.options.getBoolean('ephemeral');
+        await interaction.deferReply(ephemeral ? { flags: MessageFlags.Ephemeral } : {});
         const result = await getContributionScores(wikiConfig);
         
         if (result.error) {
