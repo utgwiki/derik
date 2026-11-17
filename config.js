@@ -70,7 +70,7 @@ const PAGE_CACHE_MS = 30 * 60 * 1000;
 
 // --- DISCORD STATUSES ---
 const STATUS_OPTIONS = [
-    { type: 4, text: "just send [[a page]] or {{a page}}!" },
+    { type: 4, text: "just send [[a page]] or {{:a page}}!" },
     { type: 4, text: "now supporting 2 wikis!" },
     { type: 4, text: "use [[utg:Page]] for untitled tag game embedding" },
     { type: 4, text: "use [[ufg:Page]] for untitled farming game embedding" },

@@ -299,7 +299,7 @@ async function handleMultiplePageRequests(pageRequests, messageOrInteraction, bo
         content: "",
         components,
         flags: MessageFlags.IsComponentsV2,
-        allowedMentions: { parse: [] }
+        allowedMentions: { parse: [], repliedUser: false }
     };
 
     if (botMessageToEdit) return botMessageToEdit.edit(payload);
@@ -353,6 +353,18 @@ function buildUserEmbed(profile, wikiConfig) {
 }
 
 async function handleUserRequest(wikiConfig, rawPageName, messageOrInteraction, botMessageToEdit = null, buttonEmoji = null) {
+    if (String(rawPageName).trim().toLowerCase() === "special:contributionscores") {
+        return await handleContribScoresRequest(messageOrInteraction, {
+            toggleContribScore,
+            WIKIS,
+            buildPageEmbed,
+            botToAuthorMap,
+            pruneMap,
+            MessageFlags,
+            wikiConfig
+        });
+    }
+
     const explicitPrefix = String(rawPageName).match(/^([A-Za-z][A-Za-z0-9_-]*):(.+)$/s);
     const explicitWiki = explicitPrefix && Object.values(WIKIS).find(wiki =>
         wiki.prefix?.toLowerCase() === explicitPrefix[1].toLowerCase()
@@ -427,7 +439,9 @@ async function handleUserRequest(wikiConfig, rawPageName, messageOrInteraction, 
 
     try {
         const userMatch = String(rawPageName).match(/^(?:User\s*:\s*|@)(.+)$/i);
-        if (userMatch) {
+        // [[User:Name]] shows the user profile, but [[User:Name/subpage]] is a
+        // page in the user namespace and must go through the page lookup.
+        if (userMatch && !userMatch[1].includes("/")) {
             const username = userMatch[1].trim();
             const profile = await getUserProfile(username, wikiConfig);
             if (!profile) {
@@ -592,7 +606,8 @@ async function handleInteraction(interaction) {
 
     if (interaction.commandName === 'contribs') {
         try {
-            await handleContribScoresRequest(interaction, { toggleContribScore, WIKIS, buildPageEmbed, botToAuthorMap, pruneMap, MessageFlags });
+            const category = interaction.options.getString('category') || '7';
+            await handleContribScoresRequest(interaction, { toggleContribScore, WIKIS, buildPageEmbed, botToAuthorMap, pruneMap, MessageFlags, category });
             return;
         } catch (err) {
             return sendInteractionError(interaction, err, 'contribs');
