@@ -65,6 +65,7 @@ module.exports = {
     WIKIS,
     WIKI_MAP: typeof WIKI_MAP !== "undefined" ? WIKI_MAP : undefined,
     COMMANDS,
+    TRACKER,
     INLINE_TEXT,
     EMOJIS,
     WEB_SERVER,

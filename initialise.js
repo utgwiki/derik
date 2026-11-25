@@ -25,6 +25,7 @@ const {
     STATUS_INTERVAL_MS
 } = require("./config.js");
 const { setDiscordBotName } = require("./bot/name.js");
+const { startTracker } = require("./functions/tracker.js");
 
 const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
 
@@ -268,5 +269,8 @@ client.on("messageReactionAdd", async (reaction, user) => {
 });
 
 client.on("interactionCreate", handleInteraction);
+
+// The tracker shares this client and registers its own ready/interval handlers.
+startTracker(client);
 
 client.login(DISCORD_TOKEN);
