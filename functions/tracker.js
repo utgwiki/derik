@@ -148,14 +148,15 @@ async function checkTracker(client, game) {
             return map;
         }, {});
         const currentPlaceIds = Object.keys(currentPlaceMap).map(Number);
-        // The v2 endpoint gives each place its own `updated` timestamp. Track the
-        // newest one as the universe's last update, with no cookie/auth needed.
-        const latestUpdate = places.reduce((latest, place) => {
-            if (!place.updated) return latest;
-            return !latest || new Date(place.updated).getTime() > new Date(latest).getTime()
-                ? place.updated
-                : latest;
-        }, null);
+        // The v2 endpoint gives each place its own `updated` timestamp. Root place
+        // changes drive the usual "game updated" message; subplace changes get
+        // their own no-ping announcement, so they are compared per place.
+        const currentPlaceUpdates = places.reduce((map, place) => {
+            if (place.updated) map[place.id] = place.updated;
+            return map;
+        }, {});
+        const rootPlace = places.find(place => place.isRootPlace === true);
+        const latestRootUpdate = rootPlace?.updated || null;
 
         let record = lastAnnouncedVisits[universeId] || {};
         let hasChanges = false;
@@ -164,10 +165,21 @@ async function checkTracker(client, game) {
             delete record.lastUpdatedTimestamp;
             hasChanges = true;
         }
-        // When seeding, adopt the current places as the baseline so existing
-        // places are not announced as if they were newly added.
+        // When seeding, adopt the current places and their timestamps as the
+        // baseline so they are not announced as new/updated.
         const previousPlaceIds = seedBaseline ? currentPlaceIds : (record.placeIds || []);
         const newPlaceIds = currentPlaceIds.filter(id => !previousPlaceIds.includes(id));
+        const seedPlaceUpdates = typeof record.placeUpdates === "undefined";
+        const previousPlaceUpdates = seedPlaceUpdates ? currentPlaceUpdates : (record.placeUpdates || {});
+        const updatedPlaces = (seedBaseline || seedPlaceUpdates) ? [] : places.filter(place =>
+            place.updated &&
+            typeof previousPlaceUpdates[place.id] === "string" &&
+            new Date(place.updated).getTime() > new Date(previousPlaceUpdates[place.id]).getTime()
+        );
+        const rootUpdates = updatedPlaces.filter(place => place.isRootPlace === true);
+        const subplaceUpdates = updatedPlaces.filter(place => place.isRootPlace !== true);
+        record.placeUpdates = currentPlaceUpdates;
+        if (seedPlaceUpdates) hasChanges = true;
 
         let channel = channelCache.get(channelId);
         if (!channel) {
@@ -200,27 +212,43 @@ async function checkTracker(client, game) {
             record.placeIds = currentPlaceIds;
         }
 
-        if (latestUpdate) {
-            if (typeof record.lastObservedUpdateTimestamp === "undefined") {
-                record.lastObservedUpdateTimestamp = latestUpdate;
-                record.lastNotifiedUpdateAt = seedBaseline
-                    ? new Date(Date.now() - getUpdatePingAfterMs()).toISOString()
-                    : latestUpdate;
-                record.pendingUpdates = [];
-                hasChanges = true;
-            } else if (new Date(latestUpdate).getTime() > new Date(record.lastObservedUpdateTimestamp).getTime()) {
-                record.pendingUpdates = [
-                    ...(Array.isArray(record.pendingUpdates) ? record.pendingUpdates : []),
-                    { created: latestUpdate }
-                ].filter((version, index, versions) =>
-                    index === versions.findIndex(candidate => candidate.created === version.created)
-                );
-                record.lastObservedUpdateTimestamp = latestUpdate;
-                record.lastUpdatedTimestamp = latestUpdate;
-                hasChanges = true;
-            }
+        if (latestRootUpdate && typeof record.lastObservedUpdateTimestamp === "undefined") {
+            record.lastObservedUpdateTimestamp = latestRootUpdate;
+            record.lastNotifiedUpdateAt = seedBaseline
+                ? new Date(Date.now() - getUpdatePingAfterMs()).toISOString()
+                : latestRootUpdate;
+            record.pendingUpdates = [];
+            hasChanges = true;
+        }
 
+        if (rootUpdates.length > 0) {
+            record.pendingUpdates = rootUpdates.reduce((pending, place) => [
+                ...pending,
+                { created: place.updated }
+            ].filter((version, index, versions) =>
+                index === versions.findIndex(candidate => candidate.created === version.created)
+            ), Array.isArray(record.pendingUpdates) ? record.pendingUpdates : []);
+            record.lastObservedUpdateTimestamp = rootUpdates.reduce((latest, place) =>
+                !latest || new Date(place.updated).getTime() > new Date(latest).getTime()
+                    ? place.updated
+                    : latest
+            , record.lastObservedUpdateTimestamp);
+            hasChanges = true;
+        }
+
+        if (Array.isArray(record.pendingUpdates) && record.pendingUpdates.length > 0) {
             if (await flushUpdateBatch(channel, record, Date.now())) hasChanges = true;
+        }
+
+        if (subplaceUpdates.length > 0) {
+            const lines = subplaceUpdates.map(place => {
+                const when = `<t:${Math.floor(new Date(place.updated).getTime() / 1000)}:R>`;
+                return `- [${place.name || `Place ${place.id}`}](<https://www.roblox.com/games/${place.id}>) updated ${when}`;
+            });
+            await channel.send(subplaceUpdates.length === 1
+                ? `**${record.name}**'s subplace ${lines[0].slice(2)}!`
+                : `**${record.name}** had ${subplaceUpdates.length} subplaces updated:\n${lines.join("\n")}`);
+            hasChanges = true;
         }
 
         const frequency = Number(TRACKER.frequency);
@@ -238,7 +266,7 @@ async function checkTracker(client, game) {
             saveState();
         }
 
-        console.log(`${record.name}: ${gameData.visits} visits, Places: ${currentPlaceIds.length}, Roblox Updated: ${latestUpdate || "n/a"}`);
+        console.log(`${record.name}: ${gameData.visits} visits, Places: ${currentPlaceIds.length}, Root Updated: ${latestRootUpdate || "n/a"}`);
     } catch (error) {
         console.error(`Error checking Universe ID ${universeId}:`, error.message);
     } finally {
