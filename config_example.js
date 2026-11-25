@@ -32,7 +32,8 @@ const COMMANDS = {
 const TRACKER = {
     roleId: "DISCORD_ROLE_ID",
     distribution: {
-        // Each channel ID maps to one or more Roblox universe IDs.
+        // Each channel ID maps to one or more Roblox universe IDs. An entry can
+        // also be { universeId: "ROBLOX_UNIVERSE_ID", ping: false } to mute pings.
         "DISCORD_CHANNEL_ID": ["ROBLOX_UNIVERSE_ID"],
         // "DISCORD_CHANNEL_ID_2": ["ROBLOX_UNIVERSE_ID_2", "ROBLOX_UNIVERSE_ID_3"],
     },

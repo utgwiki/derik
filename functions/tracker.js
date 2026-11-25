@@ -43,14 +43,23 @@ function isConfigured() {
         );
 }
 
+// Distribution entries can be a plain universe ID string or an object with an
+// optional `ping: false` to suppress role pings for that universe.
+function normalizeGame(channelId, entry) {
+    const isObject = entry && typeof entry === "object";
+    const universeId = isObject ? (entry.universeId || entry.id) : entry;
+    return {
+        channelId: String(channelId),
+        universeId: String(universeId || ""),
+        ping: isObject ? entry.ping !== false : true
+    };
+}
+
 function getGames() {
     if (TRACKER?.distribution && typeof TRACKER.distribution === "object") {
-        return Object.entries(TRACKER.distribution).flatMap(([channelId, universeIds]) => {
-            const ids = Array.isArray(universeIds) ? universeIds : [universeIds];
-            return ids.map(universeId => ({
-                channelId: String(channelId),
-                universeId: String(universeId || "")
-            }));
+        return Object.entries(TRACKER.distribution).flatMap(([channelId, universes]) => {
+            const entries = Array.isArray(universes) ? universes : [universes];
+            return entries.map(entry => normalizeGame(channelId, entry));
         }).filter(game => game.universeId && game.channelId);
     }
 
@@ -63,11 +72,11 @@ function getGames() {
         : [TRACKER?.channelId];
 
     return universeIds
-        .map((universeId, index) => ({
-            universeId: String(universeId || ""),
-            // A single channel can be shared by every configured universe.
-            channelId: String(channelIds[index] || (channelIds.length === 1 ? channelIds[0] : "") || "")
-        }))
+        // A single channel can be shared by every configured universe.
+        .map((universeId, index) => normalizeGame(
+            channelIds[index] || (channelIds.length === 1 ? channelIds[0] : "") || "",
+            universeId
+        ))
         .filter(game => game.universeId && game.channelId);
 }
 
@@ -91,7 +100,7 @@ function getUpdatePingAfterMs() {
     return Number.isFinite(value) && value > 0 ? value : 24 * 60 * 60 * 1000;
 }
 
-async function flushUpdateBatch(channel, record, now) {
+async function flushUpdateBatch(channel, record, now, canPing = true) {
     const pending = Array.isArray(record.pendingUpdates) ? record.pendingUpdates : [];
     if (pending.length === 0) return false;
 
@@ -121,7 +130,7 @@ async function flushUpdateBatch(channel, record, now) {
     const previousUpdateAt = record.lastNotifiedUpdateAt ? new Date(record.lastNotifiedUpdateAt).getTime() : null;
     const longEnoughSinceUpdate = previousUpdateAt !== null &&
         new Date(firstUpdate.created).getTime() - previousUpdateAt >= getUpdatePingAfterMs();
-    await channel.send(`${batch.length === 1 && longEnoughSinceUpdate ? `<@&${TRACKER.roleId}> ` : ""}${message}`);
+    await channel.send(`${canPing && batch.length === 1 && longEnoughSinceUpdate ? `<@&${TRACKER.roleId}> ` : ""}${message}`);
 
     record.lastNotifiedUpdateAt = lastUpdate.created;
     record.pendingUpdates = pending.slice(batch.length);
@@ -129,7 +138,7 @@ async function flushUpdateBatch(channel, record, now) {
 }
 
 async function checkTracker(client, game) {
-    const { universeId, channelId } = game;
+    const { universeId, channelId, ping = true } = game;
     if (activeChecks.has(universeId)) return;
     activeChecks.add(universeId);
 
@@ -237,17 +246,14 @@ async function checkTracker(client, game) {
         }
 
         if (Array.isArray(record.pendingUpdates) && record.pendingUpdates.length > 0) {
-            if (await flushUpdateBatch(channel, record, Date.now())) hasChanges = true;
+            if (await flushUpdateBatch(channel, record, Date.now(), ping)) hasChanges = true;
         }
 
         if (subplaceUpdates.length > 0) {
-            const lines = subplaceUpdates.map(place => {
+            for (const place of subplaceUpdates) {
                 const when = `<t:${Math.floor(new Date(place.updated).getTime() / 1000)}:R>`;
-                return `- [${place.name || `Place ${place.id}`}](<https://www.roblox.com/games/${place.id}>) updated ${when}`;
-            });
-            await channel.send(subplaceUpdates.length === 1
-                ? `**${record.name}**'s subplace ${lines[0].slice(2)}!`
-                : `**${record.name}** had ${subplaceUpdates.length} subplaces updated:\n${lines.join("\n")}`);
+                await channel.send(`**${record.name}**'s subplace [${place.name || `Place ${place.id}`}](<https://www.roblox.com/games/${place.id}>) updated ${when}!`);
+            }
             hasChanges = true;
         }
 

@@ -47,6 +47,7 @@ const TRACKER = {
             "4864117649", // utg recode
             "3202699936", // utg legacy
             "5581729181", // ufg
+            { universeId: "5752062456", ping: false },
         ],
     },
     frequency: 500000,
